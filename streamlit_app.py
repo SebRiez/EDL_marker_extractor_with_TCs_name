@@ -16,9 +16,12 @@ if uploaded_file:
     edl_text = uploaded_file.read().decode("utf-8")
     edl_lines = edl_text.splitlines()
 
+    # Nur die ersten 50 Zeilen für Vorschau anzeigen
+    preview_lines = edl_lines[:50]
+
     # Hervorhebung für *LOC-Zeilen mit HTML (grüner Hintergrund, weiße Schrift)
     highlighted_lines = []
-    for line in edl_lines:
+    for line in preview_lines:
         if "*LOC" in line:
             highlighted_lines.append(f'<div style="background-color:#228B22;color:white;padding:2px;">{line}</div>')
         else:
@@ -26,8 +29,11 @@ if uploaded_file:
 
     highlighted_html = "<br>".join(highlighted_lines)
 
-    st.subheader("📝 Vorschau der Original-EDL (mit *LOC Hervorhebung)")
+    st.subheader("📝 Vorschau der Original-EDL (erste 50 Zeilen, *LOC hervorgehoben)")
     st.markdown(highlighted_html, unsafe_allow_html=True)
+
+    if len(edl_lines) > 50:
+        st.info(f"Die EDL enthält insgesamt {len(edl_lines)} Zeilen. In der Vorschau werden nur die ersten 50 angezeigt.")
 
     # Parsing
     loc_data = []
