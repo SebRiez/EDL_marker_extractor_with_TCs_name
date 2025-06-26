@@ -8,6 +8,22 @@ st.set_page_config(page_title="EDL *LOC Extractor", layout="wide")
 st.title("🎬 EDL *LOC Extractor with Timecodes")
 st.markdown("Lade eine EDL-Datei hoch (Textformat, z. B. `.edl`), um alle `*LOC`-Einträge mit den zugehörigen Timecodes und Clipnamen zu extrahieren.")
 
+# Hilfsfunktion zum Umrechnen von Timecode nach Frames
+def timecode_to_frames(tc, fps):
+    h, m, s, f = map(int, tc.strip().split(":"))
+    return round(h * 3600 * fps + m * 60 * fps + s * fps + f)
+
+# Frame-Rate Auswahl
+fps_options = {
+    "23.98 fps": 23.98,
+    "24 fps": 24,
+    "25 fps": 25,
+    "30 fps": 30,
+    "60 fps": 60
+}
+selected_fps_label = st.selectbox("🎞️ Frame-Rate für Berechnung der Schnittdauer (cut_range)", list(fps_options.keys()), index=2)
+selected_fps = fps_options[selected_fps_label]
+
 # Datei-Upload
 uploaded_file = st.file_uploader("📤 EDL-Datei hochladen", type=["edl", "txt"])
 
@@ -57,6 +73,13 @@ if uploaded_file:
             continue
 
         if "*LOC" in line and current_event_number:
+            try:
+                frames_in = timecode_to_frames(current_timecodes["src_in"], selected_fps)
+                frames_out = timecode_to_frames(current_timecodes["src_out"], selected_fps)
+                cut_range = frames_out - frames_in
+            except:
+                cut_range = None
+
             loc_data.append({
                 "event_number": current_event_number,
                 "clip_name": current_clipname,
@@ -64,6 +87,7 @@ if uploaded_file:
                 "src_out": current_timecodes["src_out"],
                 "rec_in": current_timecodes["rec_in"],
                 "rec_out": current_timecodes["rec_out"],
+                "cut_range": cut_range,
                 "loc_text": line.strip()
             })
 
