@@ -25,6 +25,9 @@ is_drop_frame = False
 if selected_fps in [29.97, 59.94]:
     is_drop_frame = st.checkbox("🧮 Drop-Frame aktivieren (nur für NTSC 29.97 / 59.94)", value=True)
 
+# Eingabefeld für Vorschauzeilen mit Mindestwert
+preview_limit = st.number_input("🔢 Anzahl Vorschauzeilen (mindestens 50)", min_value=50, value=50, step=10)
+
 def timecode_to_frames(tc, fps, drop_frame=False):
     h, m, s, f = map(int, tc.strip().split(":"))
     if drop_frame and fps == 29.97:
@@ -50,7 +53,7 @@ uploaded_file = st.file_uploader("📤 EDL-Datei hochladen", type=["edl", "txt"]
 if uploaded_file:
     edl_text = uploaded_file.read().decode("utf-8")
     edl_lines = edl_text.splitlines()
-    preview_lines = edl_lines[:50]
+    preview_lines = edl_lines[:int(preview_limit)]
 
     highlighted_lines = []
     for line in preview_lines:
@@ -60,11 +63,11 @@ if uploaded_file:
             highlighted_lines.append(f'<div>{line}</div>')
 
     highlighted_html = "<br>".join(highlighted_lines)
-    st.subheader("📝 Vorschau der Original-EDL (erste 50 Zeilen, *LOC hervorgehoben)")
+    st.subheader(f"📝 Vorschau der Original-EDL (erste {int(preview_limit)} Zeilen, *LOC hervorgehoben)")
     st.markdown(highlighted_html, unsafe_allow_html=True)
 
-    if len(edl_lines) > 50:
-        st.info(f"Die EDL enthält insgesamt {len(edl_lines)} Zeilen. In der Vorschau werden nur die ersten 50 angezeigt.")
+    if len(edl_lines) > preview_limit:
+        st.info(f"Die EDL enthält insgesamt {len(edl_lines)} Zeilen. Es werden nur die ersten {int(preview_limit)} angezeigt.")
 
     loc_data = []
     current_event_number = None
