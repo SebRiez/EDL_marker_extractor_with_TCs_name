@@ -4,10 +4,10 @@ import re
 import io
 import math
 
-st.set_page_config(page_title="EDL *LOC Extractor", layout="wide")
+st.set_page_config(page_title="EDL locator extractor", layout="wide")
 
-st.title("🎬 EDL *LOC Extractor with Timecodes")
-st.markdown("Lade eine EDL-Datei hoch (Textformat, z. B. `.edl`), um alle `*LOC`-Einträge mit den zugehörigen Timecodes und Clipnamen zu extrahieren.")
+st.title("🎬 EDL locator extractor with Timecodes")
+st.markdown("Upload an EDL file (text format, e.g., `.edl`) to extract all `*LOC` entries along with their corresponding timecodes and clip names and durations in frames.")
 
 fps_options = {
     "23.98 fps": 23.976,
@@ -18,12 +18,15 @@ fps_options = {
     "59.94 fps": 59.94,
     "60 fps": 60
 }
-selected_fps_label = st.selectbox("🎞️ Frame-Rate für Berechnung der Schnittdauer (cut_range)", list(fps_options.keys()), index=2)
+selected_fps_label = st.selectbox("🎞️ Frame rate for calculating cut range", list(fps_options.keys()), index=2)
 selected_fps = fps_options[selected_fps_label]
 
 is_drop_frame = False
 if selected_fps in [29.97, 59.94]:
-    is_drop_frame = st.checkbox("🧮 Drop-Frame aktivieren (nur für NTSC 29.97 / 59.94)", value=True)
+    is_drop_frame = st.checkbox("🧮 Enable Drop-Frame (only for NTSC 29.97 / 59.94)", value=True)
+
+# Preview line limit
+preview_limit = st.number_input("🔢 Number of preview lines (minimum 50)", min_value=50, value=50, step=10)
 
 def timecode_to_frames(tc, fps, drop_frame=False):
     h, m, s, f = map(int, tc.strip().split(":"))
@@ -45,12 +48,12 @@ def extract_shot_id(loc_line):
     match = re.search(r"(MUM_\d{3}_\d{4})", loc_line)
     return match.group(1) if match else ""
 
-uploaded_file = st.file_uploader("📤 EDL-Datei hochladen", type=["edl", "txt"])
+uploaded_file = st.file_uploader("📤 Upload your EDL file", type=["edl", "txt"])
 
 if uploaded_file:
     edl_text = uploaded_file.read().decode("utf-8")
     edl_lines = edl_text.splitlines()
-    preview_lines = edl_lines[:50]
+    preview_lines = edl_lines[:int(preview_limit)]
 
     highlighted_lines = []
     for line in preview_lines:
@@ -60,11 +63,11 @@ if uploaded_file:
             highlighted_lines.append(f'<div>{line}</div>')
 
     highlighted_html = "<br>".join(highlighted_lines)
-    st.subheader("📝 Vorschau der Original-EDL (erste 50 Zeilen, *LOC hervorgehoben)")
+    st.subheader(f"📝 Preview of EDL (first {int(preview_limit)} lines, *LOC highlighted)")
     st.markdown(highlighted_html, unsafe_allow_html=True)
 
-    if len(edl_lines) > 50:
-        st.info(f"Die EDL enthält insgesamt {len(edl_lines)} Zeilen. In der Vorschau werden nur die ersten 50 angezeigt.")
+    if len(edl_lines) > preview_limit:
+        st.info(f"The EDL contains {len(edl_lines)} total lines. Only the first {int(preview_limit)} are shown above.")
 
     loc_data = []
     current_event_number = None
@@ -110,16 +113,16 @@ if uploaded_file:
 
     if loc_data:
         df_loc = pd.DataFrame(loc_data)
-        st.subheader("🔍 Extrahierte *LOC-Einträge mit Shot-ID")
+        st.subheader("🔍 Extracted *LOC Entries with Shot ID")
         st.dataframe(df_loc, use_container_width=True)
 
         csv_buffer = io.StringIO()
         df_loc.to_csv(csv_buffer, index=False)
         st.download_button(
-            label="📥 CSV herunterladen",
+            label="📥 Download CSV",
             data=csv_buffer.getvalue(),
             file_name="EDL_LOC_entries_with_timecodes.csv",
             mime="text/csv"
         )
     else:
-        st.warning("Keine *LOC-Einträge gefunden.")
+        st.warning("No *LOC entries found in the EDL.")
