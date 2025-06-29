@@ -44,8 +44,8 @@ def timecode_to_frames(tc, fps, drop_frame=False):
     else:
         return round(h * 3600 * fps + m * 60 * fps + s * fps + f)
 
-def extract_shot_id(text):
-    match = re.search(r"(MUM_\d{3}_\d{4}|CS\d{4})", text)
+def extract_shot_id(loc_line):
+    match = re.search(r"\b([A-Z]{3}_\d{4}_\d{4})\b", loc_line)
     return match.group(1) if match else ""
 
 def extract_locator_components(loc_line):
