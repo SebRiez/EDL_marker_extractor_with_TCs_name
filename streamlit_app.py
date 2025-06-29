@@ -7,7 +7,7 @@ import math
 st.set_page_config(page_title="EDL *LOC Extractor", layout="wide")
 
 st.title("🎬 EDL *LOC Extractor with Timecodes")
-st.markdown("Upload an EDL file (text format, e.g., `.edl`) to extract all `*LOC` entries along with their corresponding timecodes and clip names.")
+st.markdown("Upload an EDL file (text format, e.g., `.edl`) to extract all `*LOC` entries along with their timecodes and metadata.")
 
 fps_options = {
     "23.98 fps": 23.976,
@@ -15,7 +15,7 @@ fps_options = {
     "25 fps": 25,
     "29.97 fps": 29.97,
     "30 fps": 30,
-     "59.94 fps": 59.94,
+    "59.94 fps": 59.94,
     "60 fps": 60
 }
 selected_fps_label = st.selectbox("🎞️ Frame rate for calculating cut range", list(fps_options.keys()), index=2)
@@ -33,7 +33,7 @@ def timecode_to_frames(tc, fps, drop_frame=False):
         drop_frames = math.floor(fps * 0.066666)
         total_minutes = h * 60 + m
         frames = (
-            (fps * 60 * 60 * h) +
+            (fps * 3600 * h) +
             (fps * 60 * m) +
             (fps * s) +
             f -
@@ -44,26 +44,33 @@ def timecode_to_frames(tc, fps, drop_frame=False):
         return round(h * 3600 * fps + m * 60 * fps + s * fps + f)
 
 def extract_shot_id(loc_line):
-    match = re.search(r"(MUM_\d{3}_\d{4})", loc_line)
+    match = re.search(r"(MUM_\d{3}_\d{4}|CS\d{4})", loc_line)
     return match.group(1) if match else ""
+
+def extract_locator_components(loc_line):
+    # Robust matching: *LOC: or * LOC with optional colon
+    match = re.match(r"\*\s*LOC:?\s+(\d{2}:\d{2}:\d{2}:\d{2})\s+(\w+)\s+(.*)", loc_line.strip(), re.IGNORECASE)
+    if match:
+        return match.group(1), match.group(2), match.group(3).strip()
+    else:
+        return "", "", ""
 
 uploaded_file = st.file_uploader("📤 Upload your EDL file", type=["edl", "txt"])
 
 if uploaded_file:
-    edl_text = uploaded_file.read().decode("utf-8")
+    edl_text = uploaded_file.read().decode("utf-8", errors="ignore")
     edl_lines = edl_text.splitlines()
     preview_lines = edl_lines[:int(preview_limit)]
 
+    # Highlight LOC lines in preview
     highlighted_lines = []
     for line in preview_lines:
-        if "*LOC" in line:
+        if re.search(r"\*\s*LOC", line):
             highlighted_lines.append(f'<div style="background-color:#228B22;color:white;padding:2px;">{line}</div>')
         else:
             highlighted_lines.append(f'<div>{line}</div>')
-
-    highlighted_html = "<br>".join(highlighted_lines)
     st.subheader(f"📝 Preview of EDL (first {int(preview_limit)} lines, *LOC highlighted)")
-    st.markdown(highlighted_html, unsafe_allow_html=True)
+    st.markdown("<br>".join(highlighted_lines), unsafe_allow_html=True)
 
     if len(edl_lines) > preview_limit:
         st.info(f"The EDL contains {len(edl_lines)} total lines. Only the first {int(preview_limit)} are shown above.")
@@ -73,7 +80,8 @@ if uploaded_file:
     current_timecodes = None
     current_clipname = None
 
-    event_pattern = re.compile(r"^\s*(\d{6})\s+(\S+)\s+\S+\s+\S+\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)")
+    # Updated: 3- to 6-digit event numbers supported
+    event_pattern = re.compile(r"^\s*(\d{3,6})\s+(\S+)\s+\S+\s+\S+\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)")
 
     for line in edl_lines:
         event_match = event_pattern.match(line)
@@ -88,45 +96,42 @@ if uploaded_file:
             }
             continue
 
-        if "*LOC" in line and current_event_number:
-            try:
-                frames_in = timecode_to_frames(current_timecodes["src_in"], selected_fps, is_drop_frame)
-                frames_out = timecode_to_frames(current_timecodes["src_out"], selected_fps, is_drop_frame)
-                cut_range = frames_out - frames_in
-            except:
-                frames_in, frames_out, cut_range = None, None, None
+        if re.search(r"\*\s*LOC", line):
+            locator_tc, locator_color, loc_description = extract_locator_components(line)
+            shot_id = extract_shot_id(loc_description)
 
-            shot_id = extract_shot_id(line)
+            try:
+                frames_in = timecode_to_frames(current_timecodes["src_in"], selected_fps, is_drop_frame) if current_timecodes else None
+                frames_out = timecode_to_frames(current_timecodes["src_out"], selected_fps, is_drop_frame) if current_timecodes else None
+                cut_range = frames_out - frames_in if frames_in is not None and frames_out is not None else None
+            except:
+                cut_range = None
 
             loc_data.append({
-                "event_number": current_event_number,
+                "event_number": current_event_number or "",
                 "shot_id": shot_id,
-                "clip_name": current_clipname,
-                "src_in": current_timecodes["src_in"],
-                "src_out": current_timecodes["src_out"],
+                "clip_name": current_clipname or "",
+                "src_in": current_timecodes["src_in"] if current_timecodes else "",
+                "src_out": current_timecodes["src_out"] if current_timecodes else "",
                 "cut_range (frames)": cut_range,
-                "rec_in": current_timecodes["rec_in"],
-                "rec_out": current_timecodes["rec_out"],
-                "loc_text": line.strip()
+                "rec_in": current_timecodes["rec_in"] if current_timecodes else "",
+                "rec_out": current_timecodes["rec_out"] if current_timecodes else "",
+                "locator_timecode": locator_tc,
+                "locator_color": locator_color,
+                "locator_text": loc_description
             })
 
     if loc_data:
         df_loc = pd.DataFrame(loc_data)
-
         column_order = [
-            "event_number",
-            "shot_id",
-            "clip_name",
-            "src_in",
-            "src_out",
-            "cut_range (frames)",
-            "rec_in",
-            "rec_out",
-            "loc_text"
+            "event_number", "shot_id", "clip_name",
+            "src_in", "src_out", "cut_range (frames)",
+            "rec_in", "rec_out",
+            "locator_timecode", "locator_color", "locator_text"
         ]
         df_loc = df_loc[column_order]
 
-        st.subheader("🔍 Extracted *LOC Entries with Shot ID")
+        st.subheader("🔍 Extracted *LOC Entries with Metadata")
         st.dataframe(df_loc, use_container_width=True)
 
         csv_buffer = io.StringIO()
@@ -134,7 +139,7 @@ if uploaded_file:
         st.download_button(
             label="📥 Download CSV",
             data=csv_buffer.getvalue(),
-            file_name="EDL_LOC_entries_with_timecodes.csv",
+            file_name="EDL_LOC_entries_full.csv",
             mime="text/csv"
         )
     else:
