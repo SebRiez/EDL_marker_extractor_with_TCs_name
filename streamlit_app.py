@@ -3,6 +3,7 @@ import pandas as pd
 import re
 import io
 import math
+from datetime import datetime
 
 st.set_page_config(page_title="EDL *LOC Extractor", layout="wide")
 
@@ -43,12 +44,11 @@ def timecode_to_frames(tc, fps, drop_frame=False):
     else:
         return round(h * 3600 * fps + m * 60 * fps + s * fps + f)
 
-def extract_shot_id(loc_line):
-    match = re.search(r"(MUM_\d{3}_\d{4}|CS\d{4})", loc_line)
+def extract_shot_id(text):
+    match = re.search(r"(MUM_\d{3}_\d{4}|CS\d{4})", text)
     return match.group(1) if match else ""
 
 def extract_locator_components(loc_line):
-    # Robust matching: *LOC: or * LOC with optional colon
     match = re.match(r"\*\s*LOC:?\s+(\d{2}:\d{2}:\d{2}:\d{2})\s+(\w+)\s+(.*)", loc_line.strip(), re.IGNORECASE)
     if match:
         return match.group(1), match.group(2), match.group(3).strip()
@@ -62,7 +62,6 @@ if uploaded_file:
     edl_lines = edl_text.splitlines()
     preview_lines = edl_lines[:int(preview_limit)]
 
-    # Highlight LOC lines in preview
     highlighted_lines = []
     for line in preview_lines:
         if re.search(r"\*\s*LOC", line):
@@ -80,7 +79,6 @@ if uploaded_file:
     current_timecodes = None
     current_clipname = None
 
-    # Updated: 3- to 6-digit event numbers supported
     event_pattern = re.compile(r"^\s*(\d{3,6})\s+(\S+)\s+\S+\s+\S+\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)")
 
     for line in edl_lines:
@@ -123,6 +121,7 @@ if uploaded_file:
 
     if loc_data:
         df_loc = pd.DataFrame(loc_data)
+
         column_order = [
             "event_number", "shot_id", "clip_name",
             "src_in", "src_out", "cut_range (frames)",
@@ -134,13 +133,20 @@ if uploaded_file:
         st.subheader("🔍 Extracted *LOC Entries with Metadata")
         st.dataframe(df_loc, use_container_width=True)
 
+        # 🆕 Automatische Dateibenennung
+        original_name = uploaded_file.name.rsplit(".", 1)[0]
+        date_suffix = datetime.now().strftime("%y%m%d")
+        filename = f"{original_name}_processed_{date_suffix}.csv"
+
         csv_buffer = io.StringIO()
         df_loc.to_csv(csv_buffer, index=False)
+
         st.download_button(
-            label="📥 Download CSV",
+            label=f"📥 Download CSV: {filename}",
             data=csv_buffer.getvalue(),
-            file_name="EDL_LOC_entries_full.csv",
+            file_name=filename,
             mime="text/csv"
         )
     else:
         st.warning("No *LOC entries found in the EDL.")
+
