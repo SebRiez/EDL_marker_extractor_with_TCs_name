@@ -4,10 +4,10 @@ import re
 import io
 import math
 
-st.set_page_config(page_title="EDL locator extractor", layout="wide")
+st.set_page_config(page_title="EDL *LOC Extractor", layout="wide")
 
-st.title("🎬 EDL locator extractor with Timecodes")
-st.markdown("Upload an EDL file (text format, e.g., `.edl`) to extract all `*LOC` entries along with their corresponding timecodes and clip names and durations in frames.")
+st.title("🎬 EDL *LOC Extractor with Timecodes")
+st.markdown("Upload an EDL file (text format, e.g., `.edl`) to extract all `*LOC` entries along with their corresponding timecodes and clip names.")
 
 fps_options = {
     "23.98 fps": 23.976,
@@ -15,7 +15,7 @@ fps_options = {
     "25 fps": 25,
     "29.97 fps": 29.97,
     "30 fps": 30,
-    "59.94 fps": 59.94,
+     "59.94 fps": 59.94,
     "60 fps": 60
 }
 selected_fps_label = st.selectbox("🎞️ Frame rate for calculating cut range", list(fps_options.keys()), index=2)
@@ -25,7 +25,6 @@ is_drop_frame = False
 if selected_fps in [29.97, 59.94]:
     is_drop_frame = st.checkbox("🧮 Enable Drop-Frame (only for NTSC 29.97 / 59.94)", value=True)
 
-# Preview line limit
 preview_limit = st.number_input("🔢 Number of preview lines (minimum 50)", min_value=50, value=50, step=10)
 
 def timecode_to_frames(tc, fps, drop_frame=False):
@@ -101,18 +100,32 @@ if uploaded_file:
 
             loc_data.append({
                 "event_number": current_event_number,
-                "clip_name": current_clipname,
                 "shot_id": shot_id,
+                "clip_name": current_clipname,
                 "src_in": current_timecodes["src_in"],
                 "src_out": current_timecodes["src_out"],
+                "cut_range (frames)": cut_range,
                 "rec_in": current_timecodes["rec_in"],
                 "rec_out": current_timecodes["rec_out"],
-                "cut_range": cut_range,
                 "loc_text": line.strip()
             })
 
     if loc_data:
         df_loc = pd.DataFrame(loc_data)
+
+        column_order = [
+            "event_number",
+            "shot_id",
+            "clip_name",
+            "src_in",
+            "src_out",
+            "cut_range (frames)",
+            "rec_in",
+            "rec_out",
+            "loc_text"
+        ]
+        df_loc = df_loc[column_order]
+
         st.subheader("🔍 Extracted *LOC Entries with Shot ID")
         st.dataframe(df_loc, use_container_width=True)
 
