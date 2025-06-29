@@ -5,7 +5,7 @@ import io
 import math
 from datetime import datetime
 
-st.set_page_config(page_title="EDL *LOC Extractor", layout="wide")
+st.set_page_config(page_title="EDL locator extractor", layout="wide")
 
 st.title("🎬 EDL locator extractor with Timecodes and duration")
 st.markdown("Upload an EDL file (text format, e.g., `.edl`) to extract all `*LOC` entries along with their timecodes and metadata.")
