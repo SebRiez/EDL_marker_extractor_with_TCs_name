@@ -16,6 +16,7 @@ fps_options = {
     "25 fps": 25,
     "29.97 fps": 29.97,
     "30 fps": 30,
+    "59.94 fps": 59.94,
     "60 fps": 60
 }
 selected_fps_label = st.selectbox("🎞️ Frame-Rate für Berechnung der Schnittdauer (cut_range)", list(fps_options.keys()), index=2)
