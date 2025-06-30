@@ -10,8 +10,14 @@ from datetime import datetime
 
 st.set_page_config(page_title="EDL locator extractor", layout="wide")
 
-st.title("🎬 EDL locator extractor with timecodes")
-st.markdown("Upload an EDL file (text format, e.g., `.edl`) to extract all `*LOC` entries along with their timecodes and metadata.")
+st.markdown("""
+<div style='background-color:#e0f0ff;padding:15px;border-radius:10px;border:1px solid #b3d1f0;text-align:center;'>
+    <h2 style='color:#003366;margin:0;'>🎬 EDL locator extractor 🎬 </h2>
+</div>
+""", unsafe_allow_html=True)
+
+
+st.markdown("Upload an EDL file ( optimized for File32 EDL ) to extract all `*LOC` entries along with their timecodes and metadata.")
 
 fps_options = {
     "23.98 fps": 23.976,
@@ -22,14 +28,14 @@ fps_options = {
     "59.94 fps": 59.94,
     "60 fps": 60
 }
-selected_fps_label = st.selectbox("🎞️ Frame rate for calculating cut range", list(fps_options.keys()), index=2)
+selected_fps_label = st.selectbox("🎞️ FPS for calculating cut range", list(fps_options.keys()), index=2)
 selected_fps = fps_options[selected_fps_label]
 
 is_drop_frame = False
 if selected_fps in [29.97, 59.94]:
     is_drop_frame = st.checkbox("🧮 Enable Drop-Frame (only for NTSC 29.97 / 59.94)", value=True)
 
-preview_limit = st.number_input("🔢 Number of preview lines (minimum 50)", min_value=50, value=50, step=10)
+preview_limit = st.number_input("🔢 Preview lines (minimum 50)", min_value=50, value=50, step=10)
 
 def timecode_to_frames(tc, fps, drop_frame=False):
     h, m, s, f = map(int, tc.strip().split(":"))
