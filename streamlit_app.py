@@ -1,3 +1,6 @@
+# Script created by Sebastian Riezler with ChatGpt
+# c 2025
+
 import streamlit as st
 import pandas as pd
 import re
@@ -7,7 +10,7 @@ from datetime import datetime
 
 st.set_page_config(page_title="EDL locator extractor", layout="wide")
 
-st.title("🎬 EDL locator extractor with Timecodes and duration")
+st.title("🎬 EDL locator extractor with timecodes")
 st.markdown("Upload an EDL file (text format, e.g., `.edl`) to extract all `*LOC` entries along with their timecodes and metadata.")
 
 fps_options = {
@@ -44,8 +47,8 @@ def timecode_to_frames(tc, fps, drop_frame=False):
     else:
         return round(h * 3600 * fps + m * 60 * fps + s * fps + f)
 
-def extract_shot_id(loc_line):
-    match = re.search(r"\b([A-Z]{3}_\d{4}_\d{4})\b", loc_line)
+def extract_shot_id(text):
+    match = re.search(r"(MUM_\d{3}_\d{4}|CS\d{4})", text)
     return match.group(1) if match else ""
 
 def extract_locator_components(loc_line):
@@ -77,7 +80,8 @@ if uploaded_file:
     loc_data = []
     current_event_number = None
     current_timecodes = None
-    current_clipname = None
+    current_clipname = ""
+    current_tape_name = ""
 
     event_pattern = re.compile(r"^\s*(\d{3,6})\s+(\S+)\s+\S+\s+\S+\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)")
 
@@ -85,7 +89,7 @@ if uploaded_file:
         event_match = event_pattern.match(line)
         if event_match:
             current_event_number = event_match.group(1)
-            current_clipname = event_match.group(2)
+            current_tape_name = event_match.group(2)  # Tape name from EDL line
             current_timecodes = {
                 "src_in": event_match.group(3),
                 "src_out": event_match.group(4),
@@ -93,6 +97,12 @@ if uploaded_file:
                 "rec_out": event_match.group(6),
             }
             continue
+
+        # FROM CLIP NAME parsing
+        if line.strip().startswith("*FROM CLIP NAME:"):
+            clip_name_match = re.match(r"\*FROM CLIP NAME:\s+(.*)", line.strip())
+            if clip_name_match:
+                current_clipname = clip_name_match.group(1).strip()
 
         if re.search(r"\*\s*LOC", line):
             locator_tc, locator_color, loc_description = extract_locator_components(line)
@@ -108,6 +118,7 @@ if uploaded_file:
             loc_data.append({
                 "event_number": current_event_number or "",
                 "shot_id": shot_id,
+                "tape_name": current_tape_name or "",
                 "clip_name": current_clipname or "",
                 "src_in": current_timecodes["src_in"] if current_timecodes else "",
                 "src_out": current_timecodes["src_out"] if current_timecodes else "",
@@ -123,7 +134,7 @@ if uploaded_file:
         df_loc = pd.DataFrame(loc_data)
 
         column_order = [
-            "event_number", "shot_id", "clip_name",
+            "event_number", "shot_id", "tape_name", "clip_name",
             "src_in", "src_out", "cut_range (frames)",
             "rec_in", "rec_out",
             "locator_timecode", "locator_color", "locator_text"
@@ -133,7 +144,7 @@ if uploaded_file:
         st.subheader("🔍 Extracted *LOC Entries with Metadata")
         st.dataframe(df_loc, use_container_width=True)
 
-        # 🆕 Automatische Dateibenennung
+        # Automatischer Dateiname
         original_name = uploaded_file.name.rsplit(".", 1)[0]
         date_suffix = datetime.now().strftime("%y%m%d")
         filename = f"{original_name}_processed_{date_suffix}.csv"
@@ -149,4 +160,3 @@ if uploaded_file:
         )
     else:
         st.warning("No *LOC entries found in the EDL.")
-
