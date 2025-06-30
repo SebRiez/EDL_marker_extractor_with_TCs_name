@@ -8,7 +8,18 @@ import io
 import math
 from datetime import datetime
 
+# App config
 st.set_page_config(page_title="EDL locator extractor", layout="wide")
+
+# 💡 CSS for compact inputs
+st.markdown("""
+<style>
+.small-box .stSelectbox, .small-box .stNumberInput, .small-box .stCheckbox {
+    width: fit-content !important;
+    min-width: 160px;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # 🎬 Title box
 st.markdown("""
@@ -20,8 +31,13 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-st.markdown("Upload an EDL file ( optimized for File32 EDL ) to extract all `*LOC` entries along with their timecodes and metadata.")
+st.markdown(
+    "Upload an EDL file (optimized for File32 EDL) to extract all `*LOC` entries along with their timecodes and metadata.\n"
+    "If your EDL contains `Tapename` and `Clipname`, you can check below whether they should be inserted into the CSV."
+)
 
+
+# 🧮 FPS & preview inputs
 fps_options = {
     "23.98 fps": 23.976,
     "24 fps": 24,
@@ -31,15 +47,52 @@ fps_options = {
     "59.94 fps": 59.94,
     "60 fps": 60
 }
-selected_fps_label = st.selectbox("🎞️ FPS for calculating cut range", list(fps_options.keys()), index=2)
-selected_fps = fps_options[selected_fps_label]
 
-is_drop_frame = False
-if selected_fps in [29.97, 59.94]:
-    is_drop_frame = st.checkbox("🧮 Enable Drop-Frame (only for NTSC 29.97 / 59.94)", value=True)
+with st.container():
+    col1, col2, col3 = st.columns([1, 1, 1])
 
-preview_limit = st.number_input("🔢 Preview lines (minimum 50)", min_value=50, value=50, step=10)
+    with col1:
+        with st.container():
+            st.markdown('<div class="small-box">', unsafe_allow_html=True)
+            selected_fps_label = st.selectbox("🎞️ FPS", list(fps_options.keys()), index=2)
+            st.markdown("</div>", unsafe_allow_html=True)
+            selected_fps = fps_options[selected_fps_label]
 
+    with col2:
+        with st.container():
+            st.markdown('<div class="small-box">', unsafe_allow_html=True)
+            preview_limit = st.number_input("🔢 Preview lines", min_value=50, value=50, step=10, format="%d")
+            st.markdown("</div>", unsafe_allow_html=True)
+
+    with col3:
+        if selected_fps in [29.97, 59.94]:
+            with st.container():
+                st.markdown('<div class="small-box">', unsafe_allow_html=True)
+                is_drop_frame = st.checkbox("🧮 Drop-Frame", value=True)
+                st.markdown("</div>", unsafe_allow_html=True)
+        else:
+            is_drop_frame = False
+
+    with col3:
+        if selected_fps in [29.97, 59.94]:
+            ...
+        else:
+            is_drop_frame = False
+
+# 🆕 Checkboxen für Anzeigeoptionen (inline)
+st.markdown("""
+<div style="display: flex; gap: 2em; align-items: center; justify-content: center;">
+    <div>
+        <label><input type="checkbox" checked disabled style="pointer-events: none; margin-right: 0.5em;">📼 tapename</label>
+    </div>
+    <div>
+        <label><input type="checkbox" checked disabled style="pointer-events: none; margin-right: 0.5em;">🎬 clipname</label>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+
+# 🕒 Timecode tools
 def timecode_to_frames(tc, fps, drop_frame=False):
     h, m, s, f = map(int, tc.strip().split(":"))
     if drop_frame and fps == 29.97:
@@ -67,6 +120,7 @@ def extract_locator_components(loc_line):
     else:
         return "", "", ""
 
+# 📤 File upload
 uploaded_file = st.file_uploader("📤 Upload your EDL file", type=["edl", "txt"])
 
 if uploaded_file:
@@ -86,6 +140,7 @@ if uploaded_file:
     if len(edl_lines) > preview_limit:
         st.info(f"The EDL contains {len(edl_lines)} total lines. Only the first {int(preview_limit)} are shown above.")
 
+    # 🔍 Main parsing
     loc_data = []
     current_event_number = None
     current_timecodes = None
@@ -98,7 +153,7 @@ if uploaded_file:
         event_match = event_pattern.match(line)
         if event_match:
             current_event_number = event_match.group(1)
-            current_tape_name = event_match.group(2)  # Tape name from EDL line
+            current_tape_name = event_match.group(2)
             current_timecodes = {
                 "src_in": event_match.group(3),
                 "src_out": event_match.group(4),
@@ -107,7 +162,6 @@ if uploaded_file:
             }
             continue
 
-        # FROM CLIP NAME parsing
         if line.strip().startswith("*FROM CLIP NAME:"):
             clip_name_match = re.match(r"\*FROM CLIP NAME:\s+(.*)", line.strip())
             if clip_name_match:
@@ -139,9 +193,9 @@ if uploaded_file:
                 "locator_text": loc_description
             })
 
+    # 📥 Output
     if loc_data:
         df_loc = pd.DataFrame(loc_data)
-
         column_order = [
             "event_number", "shot_id", "tape_name", "clip_name",
             "src_in", "src_out", "cut_range (frames)",
@@ -153,7 +207,6 @@ if uploaded_file:
         st.subheader("🔍 Extracted *LOC Entries with Metadata")
         st.dataframe(df_loc, use_container_width=True)
 
-        # Automatischer Dateiname
         original_name = uploaded_file.name.rsplit(".", 1)[0]
         date_suffix = datetime.now().strftime("%y%m%d")
         filename = f"{original_name}_processed_{date_suffix}.csv"
