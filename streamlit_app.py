@@ -10,12 +10,15 @@ from datetime import datetime
 
 st.set_page_config(page_title="EDL locator extractor", layout="wide")
 
+# 🎬 Title box
 st.markdown("""
-<div style='background-color:#e0f0ff;padding:15px;border-radius:10px;border:1px solid #b3d1f0;text-align:center;'>
-    <h2 style='color:#003366;margin:0;'>🎬 EDL locator extractor 🎬 </h2>
+<div style="display: flex; justify-content: center;">
+  <div style='background-color:#e0f0ff;padding:10px 20px;border-radius:10px;
+              border:1px solid #b3d1f0; text-align:center; display:inline-block;'>
+    <h2 style='color:#003366; margin: 0;'>🎬 EDL locator extractor 🎬 </h2>
+  </div>
 </div>
 """, unsafe_allow_html=True)
-
 
 st.markdown("Upload an EDL file ( optimized for File32 EDL ) to extract all `*LOC` entries along with their timecodes and metadata.")
 
