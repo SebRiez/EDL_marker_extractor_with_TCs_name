@@ -31,7 +31,11 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-st.markdown("Upload an EDL file ( optimized for File32 EDL ) to extract all `*LOC` entries along with their timecodes and metadata.")
+st.markdown(
+    "Upload an EDL file (optimized for File32 EDL) to extract all `*LOC` entries along with their timecodes and metadata.\n"
+    "If your EDL contains `Tapename` and `Clipname`, you can check below whether they should be inserted into the CSV."
+)
+
 
 # 🧮 FPS & preview inputs
 fps_options = {
