@@ -1,5 +1,5 @@
 # Script created by Sebastian Riezler with ChatGpt
-# c 2025
+# c 2025/06
 
 import streamlit as st
 import pandas as pd
