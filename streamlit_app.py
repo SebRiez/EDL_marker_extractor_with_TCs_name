@@ -33,7 +33,7 @@ st.markdown("""
 
 st.markdown("""
 Upload an EDL file (optimized for File32 EDL) to extract all `*LOC` entries along with their timecodes and metadata.  
-If your EDL contains `Tapename` and `Clipname`, you can check below whether they should be inserted into the CSV.
+If your EDL contains `Tapename` and `Clipname`, you can check below whether they should be inserted into the CSV (not active yet)
 """)
 
 
