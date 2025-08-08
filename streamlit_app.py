@@ -36,7 +36,6 @@ Upload an EDL file (optimized for File32 EDL) to extract all `*LOC` entries alon
 If your EDL contains `Tapename` and `Clipname`, you can check below whether they should be inserted into the CSV (not active yet)
 """)
 
-
 # 🧮 FPS & preview inputs
 fps_options = {
     "23.98 fps": 23.976,
@@ -73,12 +72,6 @@ with st.container():
         else:
             is_drop_frame = False
 
-    with col3:
-        if selected_fps in [29.97, 59.94]:
-            ...
-        else:
-            is_drop_frame = False
-
 # 🆕 Checkboxen für Anzeigeoptionen (inline)
 st.markdown("""
 <div style="display: flex; gap: 2em; align-items: center; justify-content: center;">
@@ -91,6 +84,9 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# ➕ NEW: Export mode
+export_only_loc = st.checkbox("Export only *LOC entries", value=True,
+                              help="Turn off to export ALL events. Events without *LOC will have empty locator fields; events with multiple LOCs will be duplicated per locator.")
 
 # 🕒 Timecode tools
 def timecode_to_frames(tc, fps, drop_frame=False):
@@ -110,6 +106,7 @@ def timecode_to_frames(tc, fps, drop_frame=False):
         return round(h * 3600 * fps + m * 60 * fps + s * fps + f)
 
 def extract_shot_id(text):
+    # keep your patterns; extend as needed
     match = re.search(r"(MUM_\d{3}_\d{4}|CS\d{4})", text)
     return match.group(1) if match else ""
 
@@ -141,7 +138,9 @@ if uploaded_file:
         st.info(f"The EDL contains {len(edl_lines)} total lines. Only the first {int(preview_limit)} are shown above.")
 
     # 🔍 Main parsing
-    loc_data = []
+    loc_rows = []                       # rows that correspond to actual *LOC lines
+    events_order = []                   # keep appearance order of events
+    events_map = {}                     # event_number -> dict of base metadata (no locator)
     current_event_number = None
     current_timecodes = None
     current_clipname = ""
@@ -160,12 +159,26 @@ if uploaded_file:
                 "rec_in": event_match.group(5),
                 "rec_out": event_match.group(6),
             }
+            # register/update event base info
+            if current_event_number not in events_map:
+                events_order.append(current_event_number)
+            events_map[current_event_number] = {
+                "tape_name": current_tape_name or "",
+                "clip_name": current_clipname or "",  # may be updated later
+                "src_in": current_timecodes["src_in"] if current_timecodes else "",
+                "src_out": current_timecodes["src_out"] if current_timecodes else "",
+                "rec_in": current_timecodes["rec_in"] if current_timecodes else "",
+                "rec_out": current_timecodes["rec_out"] if current_timecodes else "",
+            }
             continue
 
         if line.strip().startswith("*FROM CLIP NAME:"):
             clip_name_match = re.match(r"\*FROM CLIP NAME:\s+(.*)", line.strip())
             if clip_name_match:
                 current_clipname = clip_name_match.group(1).strip()
+                # propagate clip name to last seen event if present
+                if current_event_number and current_event_number in events_map:
+                    events_map[current_event_number]["clip_name"] = current_clipname
 
         if re.search(r"\*\s*LOC", line):
             locator_tc, locator_color, loc_description = extract_locator_components(line)
@@ -175,10 +188,10 @@ if uploaded_file:
                 frames_in = timecode_to_frames(current_timecodes["src_in"], selected_fps, is_drop_frame) if current_timecodes else None
                 frames_out = timecode_to_frames(current_timecodes["src_out"], selected_fps, is_drop_frame) if current_timecodes else None
                 cut_range = frames_out - frames_in if frames_in is not None and frames_out is not None else None
-            except:
+            except Exception:
                 cut_range = None
 
-            loc_data.append({
+            loc_rows.append({
                 "event_number": current_event_number or "",
                 "shot_id": shot_id,
                 "tape_name": current_tape_name or "",
@@ -193,26 +206,72 @@ if uploaded_file:
                 "locator_text": loc_description
             })
 
-    # 📥 Output
-    if loc_data:
-        df_loc = pd.DataFrame(loc_data)
-        column_order = [
-            "event_number", "shot_id", "tape_name", "clip_name",
-            "src_in", "src_out", "cut_range (frames)",
-            "rec_in", "rec_out",
-            "locator_timecode", "locator_color", "locator_text"
-        ]
-        df_loc = df_loc[column_order]
+    # 📦 Build output according to export mode
+    column_order = [
+        "event_number", "shot_id", "tape_name", "clip_name",
+        "src_in", "src_out", "cut_range (frames)",
+        "rec_in", "rec_out",
+        "locator_timecode", "locator_color", "locator_text"
+    ]
 
-        st.subheader("🔍 Extracted *LOC Entries with Metadata")
-        st.dataframe(df_loc, use_container_width=True)
+    if export_only_loc:
+        # Only rows with *LOC
+        if loc_rows:
+            df_out = pd.DataFrame(loc_rows)[column_order]
+        else:
+            df_out = pd.DataFrame(columns=column_order)
+    else:
+        # ALL events: merge base event rows with locators
+        merged_rows = []
+        # build a quick index of locs by event
+        loc_by_event = {}
+        for row in loc_rows:
+            loc_by_event.setdefault(row["event_number"], []).append(row)
+
+        for ev in events_order:
+            base = events_map.get(ev, {})
+            # compute cut_range for base row too
+            try:
+                frames_in = timecode_to_frames(base.get("src_in","00:00:00:00"), selected_fps, is_drop_frame) if base.get("src_in") else None
+                frames_out = timecode_to_frames(base.get("src_out","00:00:00:00"), selected_fps, is_drop_frame) if base.get("src_out") else None
+                cut_range = frames_out - frames_in if frames_in is not None and frames_out is not None else None
+            except Exception:
+                cut_range = None
+
+            if ev in loc_by_event:
+                # add one row per locator (preserve full locator info)
+                merged_rows.extend(loc_by_event[ev])
+            else:
+                # add a base row with empty locator fields
+                merged_rows.append({
+                    "event_number": ev,
+                    "shot_id": "",
+                    "tape_name": base.get("tape_name",""),
+                    "clip_name": base.get("clip_name",""),
+                    "src_in": base.get("src_in",""),
+                    "src_out": base.get("src_out",""),
+                    "cut_range (frames)": cut_range,
+                    "rec_in": base.get("rec_in",""),
+                    "rec_out": base.get("rec_out",""),
+                    "locator_timecode": "",
+                    "locator_color": "",
+                    "locator_text": ""
+                })
+
+        df_out = pd.DataFrame(merged_rows)[column_order] if merged_rows else pd.DataFrame(columns=column_order)
+
+    # 📥 Output
+    if not df_out.empty:
+        view_title = "🔍 Extracted *LOC Entries with Metadata" if export_only_loc else "🧾 All Events (incl. locator rows)"
+        st.subheader(view_title)
+        st.dataframe(df_out, use_container_width=True)
 
         original_name = uploaded_file.name.rsplit(".", 1)[0]
         date_suffix = datetime.now().strftime("%y%m%d")
         filename = f"{original_name}_processed_{date_suffix}.csv"
 
         csv_buffer = io.StringIO()
-        df_loc.to_csv(csv_buffer, index=False)
+        df_out.to_csv(csv_buffer, index=False)
 
         st.download_button(
             label=f"📥 Download CSV: {filename}",
@@ -221,4 +280,7 @@ if uploaded_file:
             mime="text/csv"
         )
     else:
-        st.warning("No *LOC entries found in the EDL.")
+        if export_only_loc:
+            st.warning("No *LOC entries found in the EDL.")
+        else:
+            st.warning("No events were recognized in the EDL.")
