@@ -9,7 +9,7 @@ import math
 from datetime import datetime
 
 # App config
-st.set_page_config(page_title="EDL locator extractor", layout="wide")
+st.set_page_config(page_title="EDL Locator Extractor", layout="wide")
 
 # 💡 CSS for compact inputs
 st.markdown("""
@@ -26,14 +26,14 @@ st.markdown("""
 <div style="display: flex; justify-content: center;">
   <div style='background-color:#e0f0ff;padding:10px 20px;border-radius:10px;
               border:1px solid #b3d1f0; text-align:center; display:inline-block;'>
-    <h2 style='color:#003366; margin: 0;'>🎬 EDL locator extractor 🎬 </h2>
+    <h2 style='color:#003366; margin: 0;'>🎬 EDL Locator Extractor 🎬 </h2>
   </div>
 </div>
 """, unsafe_allow_html=True)
 
 st.markdown("""
 Upload an EDL file (optimized for File32 EDL) to extract all `*LOC` entries along with their timecodes and metadata.  
-If your EDL contains `Tapename` and `Clipname`, you can check below whether they should be inserted into the CSV (not active yet)
+If your EDL contains `Tapename` and `Clipname`, you can check below whether they should be inserted into the CSV (not active yet).
 """)
 
 # 🧮 FPS & preview inputs
@@ -47,46 +47,56 @@ fps_options = {
     "60 fps": 60
 }
 
+# 🎨 Locator Color Options (must match EDL colors)
+LOCATOR_COLORS_EN = ["All Colors", "Red", "Yellow", "Blue", "Denim", "Pink", "Orange", "White", "Black"]
+
 with st.container():
     col1, col2, col3 = st.columns([1, 1, 1])
 
     with col1:
         with st.container():
             st.markdown('<div class="small-box">', unsafe_allow_html=True)
-            selected_fps_label = st.selectbox("🎞️ FPS", list(fps_options.keys()), index=2)
+            selected_fps_label = st.selectbox("🎞️ **FPS**", list(fps_options.keys()), index=2)
             st.markdown("</div>", unsafe_allow_html=True)
             selected_fps = fps_options[selected_fps_label]
 
     with col2:
         with st.container():
             st.markdown('<div class="small-box">', unsafe_allow_html=True)
-            preview_limit = st.number_input("🔢 Preview lines", min_value=50, value=50, step=10, format="%d")
+            preview_limit = st.number_input("🔢 **Preview Lines**", min_value=50, value=50, step=10, format="%d")
             st.markdown("</div>", unsafe_allow_html=True)
 
     with col3:
+        with st.container():
+            st.markdown('<div class="small-box">', unsafe_allow_html=True)
+            # NEW: Color selection for locator export
+            selected_color = st.selectbox("🎨 **Filter Locator Color**", LOCATOR_COLORS_EN, index=0, 
+                                          help="Select a color to export only locators of that color.")
+            st.markdown("</div>", unsafe_allow_html=True)
+        
         if selected_fps in [29.97, 59.94]:
             with st.container():
                 st.markdown('<div class="small-box">', unsafe_allow_html=True)
-                is_drop_frame = st.checkbox("🧮 Drop-Frame", value=True)
+                is_drop_frame = st.checkbox("🧮 **Drop-Frame**", value=True)
                 st.markdown("</div>", unsafe_allow_html=True)
         else:
             is_drop_frame = False
 
-# 🆕 Checkboxen für Anzeigeoptionen (inline)
+# 🆕 Checkboxes for display options (inline)
 st.markdown("""
 <div style="display: flex; gap: 2em; align-items: center; justify-content: center;">
     <div>
-        <label><input type="checkbox" checked disabled style="pointer-events: none; margin-right: 0.5em;">📼 tapename</label>
+        <label><input type="checkbox" checked disabled style="pointer-events: none; margin-right: 0.5em;">📼 Tapename</label>
     </div>
     <div>
-        <label><input type="checkbox" checked disabled style="pointer-events: none; margin-right: 0.5em;">🎬 clipname</label>
+        <label><input type="checkbox" checked disabled style="pointer-events: none; margin-right: 0.5em;">🎬 Clipname</label>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
 # ➕ NEW: Export mode
-export_only_loc = st.checkbox("Export only *LOC entries", value=True,
-                              help="Turn off to export ALL events. Events without *LOC will have empty locator fields; events with multiple LOCs will be duplicated per locator.")
+export_only_loc = st.checkbox("**Export only *LOC entries**", value=True,
+                             help="Turn off to export ALL events. Events without *LOC will have empty locator fields; events with multiple LOCs will be duplicated per locator.")
 
 # 🕒 Timecode tools
 def timecode_to_frames(tc, fps, drop_frame=False):
@@ -106,11 +116,12 @@ def timecode_to_frames(tc, fps, drop_frame=False):
         return round(h * 3600 * fps + m * 60 * fps + s * fps + f)
 
 def extract_shot_id(text):
-    # keep your patterns; extend as needed
-    match = re.search(r"(MUM_\d{3}_\d{4}|CS\d{4})", text)
+    # Searches for 3 uppercase letters followed by underscore and digits (e.g., ABC_123_4567, XYZ_9999) or CSxxxx
+    match = re.search(r"([A-Z]{3}_\d{3}_\d{4}|[A-Z]{3}_\d{4}|CS\d{4})", text)
     return match.group(1) if match else ""
 
 def extract_locator_components(loc_line):
+    # Extracts TC, color (color is the second word after *LOC:), and text
     match = re.match(r"\*\s*LOC:?\s+(\d{2}:\d{2}:\d{2}:\d{2})\s+(\w+)\s+(.*)", loc_line.strip(), re.IGNORECASE)
     if match:
         return match.group(1), match.group(2), match.group(3).strip()
@@ -118,7 +129,7 @@ def extract_locator_components(loc_line):
         return "", "", ""
 
 # 📤 File upload
-uploaded_file = st.file_uploader("📤 Upload your EDL file", type=["edl", "txt"])
+uploaded_file = st.file_uploader("📤 **Upload your EDL file**", type=["edl", "txt"])
 
 if uploaded_file:
     edl_text = uploaded_file.read().decode("utf-8", errors="ignore")
@@ -131,11 +142,11 @@ if uploaded_file:
             highlighted_lines.append(f'<div style="background-color:#228B22;color:white;padding:2px;">{line}</div>')
         else:
             highlighted_lines.append(f'<div>{line}</div>')
-    st.subheader(f"📝 Preview of EDL (first {int(preview_limit)} lines, *LOC highlighted)")
+    st.subheader(f"📝 **Preview of EDL** (first {int(preview_limit)} lines, *LOC highlighted)")
     st.markdown("<br>".join(highlighted_lines), unsafe_allow_html=True)
 
     if len(edl_lines) > preview_limit:
-        st.info(f"The EDL contains {len(edl_lines)} total lines. Only the first {int(preview_limit)} are shown above.")
+        st.info(f"The EDL contains **{len(edl_lines)}** total lines. Only the first **{int(preview_limit)}** are shown above.")
 
     # 🔍 Main parsing
     loc_rows = []                       # rows that correspond to actual *LOC lines
@@ -202,7 +213,7 @@ if uploaded_file:
                 "rec_in": current_timecodes["rec_in"] if current_timecodes else "",
                 "rec_out": current_timecodes["rec_out"] if current_timecodes else "",
                 "locator_timecode": locator_tc,
-                "locator_color": locator_color,
+                "locator_color": locator_color.upper(), # Store color in uppercase for filtering
                 "locator_text": loc_description
             })
 
@@ -213,6 +224,16 @@ if uploaded_file:
         "rec_in", "rec_out",
         "locator_timecode", "locator_color", "locator_text"
     ]
+    
+    # 💥 NEW: Filter locators by color
+    if selected_color != "All Colors":
+        # Filter only the loc_rows by the selected color
+        filtered_loc_rows = [
+            row for row in loc_rows 
+            if row["locator_color"] == selected_color.upper()
+        ]
+        # Update loc_rows for further processing
+        loc_rows = filtered_loc_rows
 
     if export_only_loc:
         # Only rows with *LOC
@@ -220,6 +241,10 @@ if uploaded_file:
             df_out = pd.DataFrame(loc_rows)[column_order]
         else:
             df_out = pd.DataFrame(columns=column_order)
+            if selected_color != "All Colors":
+                st.warning(f"No *LOC entries with color '{selected_color}' found.")
+            else:
+                st.warning("No *LOC entries found in the EDL.")
     else:
         # ALL events: merge base event rows with locators
         merged_rows = []
@@ -232,8 +257,21 @@ if uploaded_file:
             base = events_map.get(ev, {})
             # compute cut_range for base row too
             try:
-                frames_in = timecode_to_frames(base.get("src_in","00:00:00:00"), selected_fps, is_drop_frame) if base.get("src_in") else None
-                frames_out = timecode_to_frames(base.get("src_out","00:00:00:00"), selected_fps, is_drop_frame) if base.get("src_out") else None
+                # Store the source IN timecode
+                src_in_tc = base.get("src_in", "00:00:00:00")
+                
+                # Compute frames_in safely on a separate line
+                frames_in = timecode_to_frames(src_in_tc, selected_fps, is_drop_frame) \
+                            if base.get("src_in") else None
+
+                # Store the source OUT timecode
+                src_out_tc = base.get("src_out", "00:00:00:00")
+                
+                # Compute frames_out safely on a separate line
+                frames_out = timecode_to_frames(src_out_tc, selected_fps, is_drop_frame) \
+                             if base.get("src_out") else None
+                
+                # Compute cut range
                 cut_range = frames_out - frames_in if frames_in is not None and frames_out is not None else None
             except Exception:
                 cut_range = None
@@ -262,13 +300,14 @@ if uploaded_file:
 
     # 📥 Output
     if not df_out.empty:
-        view_title = "🔍 Extracted *LOC Entries with Metadata" if export_only_loc else "🧾 All Events (incl. locator rows)"
+        view_title = "🔍 **Extracted *LOC Entries with Metadata**" if export_only_loc else "🧾 **All Events (incl. locator rows)**"
         st.subheader(view_title)
         st.dataframe(df_out, use_container_width=True)
 
         original_name = uploaded_file.name.rsplit(".", 1)[0]
         date_suffix = datetime.now().strftime("%y%m%d")
-        filename = f"{original_name}_processed_{date_suffix}.csv"
+        filename_color = selected_color.lower().replace(" ", "_")
+        filename = f"{original_name}_processed_{date_suffix}_{filename_color}.csv"
 
         csv_buffer = io.StringIO()
         df_out.to_csv(csv_buffer, index=False)
@@ -280,7 +319,4 @@ if uploaded_file:
             mime="text/csv"
         )
     else:
-        if export_only_loc:
-            st.warning("No *LOC entries found in the EDL.")
-        else:
-            st.warning("No events were recognized in the EDL.")
+        st.warning("No events or locators found that match your criteria.")
