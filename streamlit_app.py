@@ -340,11 +340,11 @@ with col_cb3:
                                   help="Turn off to export ALL events. Events without *LOC will have empty locator fields; events with multiple LOCs will be duplicated per locator.")
 
 with col_cb4:
-    # NEW OPTION FOR DURATION CALCULATION
+    # NEW OPTION FOR DURATION CALCULATION - Tooltip updated with the text from the screenshot
     exclude_last_frame = st.checkbox(
         "➖ **Duration: Exclude last frame**", 
         value=True, 
-        help="Enabled: Duration = (SRC OUT - SRC IN) - 1 Frame (e.g., 00:01:00 - 00:00:01 = 24 Frames; with subtraction: 23 Frames). Disabled: Standard EDL Duration (Out is exclusive)."
+        help="Depending on the use case, users may define the duration scope differently. Therefore the 'Scope' feature allows users to choose whether to exclude or include the last frame, corresponding to the 'End' value. By default, 'Scope' is set to exclude the last frame because this is the most common use case."
     )
     
 st.markdown('</div>', unsafe_allow_html=True) # End of Settings Container
@@ -492,7 +492,7 @@ if uploaded_file:
                 src_out, 
                 selected_fps, 
                 is_drop_frame, 
-                exclude_last_frame # NEW VARIABLE
+                exclude_last_frame
             )
             
             row = {
@@ -506,7 +506,7 @@ if uploaded_file:
                 "*LOC TC": locator_tc,
                 "*LOC Color": locator_color,
                 "*LOC Description": loc_description,
-                "Duration (Frames)": duration_frames, # TRANSLATED COLUMN NAME
+                "Duration (Frames)": duration_frames,
             }
             
             # Conditional inclusion based on checkboxes
@@ -534,7 +534,7 @@ if uploaded_file:
                     src_out, 
                     selected_fps, 
                     is_drop_frame,
-                    exclude_last_frame # NEW VARIABLE
+                    exclude_last_frame
                 )
                 
                 row = {
@@ -548,7 +548,7 @@ if uploaded_file:
                     "*LOC TC": "",
                     "*LOC Color": "",
                     "*LOC Description": "No LOCATOR found",
-                    "Duration (Frames)": duration_frames, # TRANSLATED COLUMN NAME
+                    "Duration (Frames)": duration_frames,
                 }
                 
                 # Conditional inclusion based on checkboxes
@@ -576,7 +576,7 @@ if uploaded_file:
         desired_columns.extend([
             "Src_In", 
             "Src_Out", 
-            "Duration (Frames)", # TRANSLATED
+            "Duration (Frames)",
             "Rec_In", 
             "Rec_Out", 
             "*LOC TC", 
