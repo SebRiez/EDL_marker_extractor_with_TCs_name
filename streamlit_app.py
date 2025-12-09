@@ -344,7 +344,7 @@ with col_cb4:
     exclude_last_frame = st.checkbox(
         "➖ **Duration: Exclude last frame**", 
         value=True, 
-        help="Depending on the use case, users may define the duration scope differently. Therefore the 'exclude' feature allows users to choose whether to exclude or include the last frame, corresponding to the 'End' value. By default, 'Scope' is set to exclude the last frame because this is the most common use case."
+        help="Depending on the use case, users may define the required duration differently. The feature 'Duration: Exclude last frame' allows you to choose whether the duration should include the End Frame (Out) or not. By default, this option is enabled to subtract the End Frame (Length = Out - In - 1), as this is the most common method for calculating clip length in many systems."
     )
     
 st.markdown('</div>', unsafe_allow_html=True) # End of Settings Container
