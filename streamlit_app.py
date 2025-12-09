@@ -9,9 +9,9 @@ import math
 from datetime import datetime
 
 # ---------------------------------------------------------
-# FARBDEFINITIONEN (Unverändert)
+# COLOR DEFINITIONS (Unchanged)
 # ---------------------------------------------------------
-# Mappe von Farbnamen zu CSS-kompatiblen Werten (Hex oder Standardname)
+# Map of color names to CSS-compatible values (Hex or standard name)
 COLOR_HEX_MAP = {
     'Blue': '#0074D9', 'Cyan': '#00B8D4', 'Green': '#2ECC40', 
     'Yellow': '#FFDC00', 'Red': '#FF4136', 'Orange': '#FF851B', 
@@ -21,14 +21,14 @@ COLOR_HEX_MAP = {
     'White': '#FFFFFF', 'Black': '#000000', 
     'Denim': '#1560BD'
 }
-# Aktualisierte Liste der standardisierten Markerfarben (basiert auf der Map)
+# Updated list of standardized marker colors (based on the map)
 COLOR_OPTIONS = list(COLOR_HEX_MAP.keys())
-# Farbauswahl für den Filter (Alle Farben + die definierten Optionen)
+# Color selection for the filter (All Colors + the defined options)
 FILTER_COLOR_OPTIONS = ["All Colors"] + COLOR_OPTIONS
 
 
 # ---------------------------------------------------------
-# Page Configuration (Unverändert)
+# Page Configuration (Unchanged)
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="EDL Locator Extractor",
@@ -37,14 +37,14 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# CSS – Emerald Green Palette (Unverändert)
+# CSS – Emerald Green Palette (Unchanged)
 # ---------------------------------------------------------
 st.markdown("""
 <style>
-    /* FARBPALETTE (Emerald Green):
-     * Deep Dark Grey (Hintergrund): #1E2025 
+    /* COLOR PALETTE (Emerald Green):
+     * Deep Dark Grey (Background): #1E2025 
      * Mid Dark Grey (Container): #2D2F34
-     * Emerald Green (Akzent, Interaktion): #42B38F
+     * Emerald Green (Accent, Interaction): #42B38F
      * Light Green (Highlight): #80ED99
      * Off-White (Text): #F0F0F0
      */
@@ -55,7 +55,7 @@ st.markdown("""
         color: #F0F0F0;
     }
 
-    /* Begrenzung der maximalen Breite des Hauptinhalt - 900px */
+    /* Limit maximum width of main content - 900px */
     .main {
         max-width: 900px; 
         padding: 0 3rem; 
@@ -99,7 +99,7 @@ st.markdown("""
         margin-bottom: 1.5rem;
     }
     
-    /* Preview cards (nicht direkt verwendet, aber für Konsistenz beibehalten) */
+    /* Preview cards (not directly used, but maintained for consistency) */
     .preview-card {
         background: #2D2F34;
         border: 1px solid rgba(66, 179, 143, 0.2);
@@ -139,7 +139,7 @@ st.markdown("""
         box-shadow: 0 0 0 3px rgba(66, 179, 143, 0.3) !important;
     }
     
-    /* Buttons - Primary (Emerald Green Akzent) */
+    /* Buttons - Primary (Emerald Green Accent) */
     .stButton button {
         background: #42B38F !important;
         color: #1E2025 !important;
@@ -157,7 +157,7 @@ st.markdown("""
         box-shadow: 0 8px 24px rgba(66, 179, 143, 0.5) !important;
     }
     
-    /* Download buttons (Sekundärer Akzent) */
+    /* Download buttons (Secondary Accent) */
     .stDownloadButton button {
         background: rgba(128, 237, 153, 0.15) !important; 
         color: #80ED99 !important; 
@@ -174,7 +174,7 @@ st.markdown("""
         transform: translateY(-2px) !important;
     }
     
-    /* File uploader (Dunkler Hintergrund mit hellem Rand) */
+    /* File uploader (Dark background with light border) */
     div[data-testid="stFileUploader"] {
         background: #2D2F34;
         border: 2px dashed rgba(128, 237, 153, 0.5); 
@@ -188,7 +188,7 @@ st.markdown("""
         background: rgba(66, 179, 143, 0.1);
     }
     
-    /* Bilder: Skalierung und Zentrierung */
+    /* Images: Scaling and centering */
     div[data-testid="stImage"] img {
         border-radius: 1rem;
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
@@ -215,7 +215,7 @@ st.markdown("""
     }
     
     .stTabs [aria-selected="true"] {
-        /* Aktiver Tab als heller Akzent */
+        /* Active tab as light accent */
         background: linear-gradient(135deg, #42B38F 0%, #80ED99 100%);
         color: #1E2025 !important; 
     }
@@ -240,15 +240,15 @@ st.markdown("""
         margin: 2rem 0 !important;
     }
     
-    /* ZUGEFÜGT FÜR CODE 2: Angepasstes Styling für kleine Boxen/Inputs */
+    /* ADDED FOR CODE 2: Customized styling for small boxes/inputs */
     .small-box .stSelectbox, .small-box .stNumberInput, .small-box .stCheckbox {
         width: fit-content !important;
         min-width: 160px;
     }
     
-    /* Hintergrundfarbe für die *LOC Zeilen-Highlights anpassen */
+    /* Background color for *LOC line highlights adjusted */
     .loc-highlight {
-        background-color: rgba(66, 179, 143, 0.3) !important; /* Emerald Green Akzent */
+        background-color: rgba(66, 179, 143, 0.3) !important; /* Emerald Green Accent */
         color: #F0F0F0 !important;
         padding: 2px;
         border-radius: 0.25rem;
@@ -287,7 +287,7 @@ fps_options = {
     "60 fps": 60
 }
 
-st.markdown('<div class="glass-container">', unsafe_allow_html=True) # Neuer Container
+st.markdown('<div class="glass-container">', unsafe_allow_html=True) # New Container
 st.markdown("### ⚙️ Settings")
 
 col1, col2, col3 = st.columns([1, 1, 1])
@@ -340,18 +340,18 @@ with col_cb3:
                                   help="Turn off to export ALL events. Events without *LOC will have empty locator fields; events with multiple LOCs will be duplicated per locator.")
 
 with col_cb4:
-    # NEUE OPTION FÜR DIE DAUERBERECHNUNG
+    # NEW OPTION FOR DURATION CALCULATION
     exclude_last_frame = st.checkbox(
-        "➖ **Dauer: Letztes Frame abziehen**", 
+        "➖ **Duration: Exclude last frame**", 
         value=True, 
-        help="Aktiviert: Dauer = (SRC OUT - SRC IN) - 1 Frame (z.B. 00:01:00 - 00:00:01 = 24 Frames; mit Abzug: 23 Frames). Deaktiviert: Standard EDL Dauer (Out ist exklusiv)."
+        help="Enabled: Duration = (SRC OUT - SRC IN) - 1 Frame (e.g., 00:01:00 - 00:00:01 = 24 Frames; with subtraction: 23 Frames). Disabled: Standard EDL Duration (Out is exclusive)."
     )
     
-st.markdown('</div>', unsafe_allow_html=True) # Ende des Settings-Containers
+st.markdown('</div>', unsafe_allow_html=True) # End of Settings Container
 
 # 🕒 Timecode tools 
 def timecode_to_frames(tc, fps, drop_frame=False):
-    # Hilfsfunktion, um Timecode in Frames umzuwandeln
+    # Helper function to convert timecode to frames
     try:
         h, m, s, f = map(int, tc.strip().split(":"))
         if drop_frame and fps == 29.97:
@@ -371,18 +371,18 @@ def timecode_to_frames(tc, fps, drop_frame=False):
         return 0 
 
 def calculate_duration_frames(tc_in, tc_out, fps, drop_frame=False, exclude_last=False):
-    # Berechnet die Dauer in Frames (Out - In)
+    # Calculates duration in frames (Out - In)
     frames_out = timecode_to_frames(tc_out, fps, drop_frame)
     frames_in = timecode_to_frames(tc_in, fps, drop_frame)
     
-    # Standard-EDL-Dauer (Out ist exklusiv: Frames(OUT) - Frames(IN))
+    # Standard EDL Duration (Out is exclusive: Frames(OUT) - Frames(IN))
     duration = frames_out - frames_in
     
-    # Logik für den optionalen Abzug des letzten Frames
+    # Logic for optional exclusion of the last frame
     if exclude_last:
         duration = duration - 1
     
-    # Sicherstellen, dass die Dauer nicht negativ ist
+    # Ensure duration is not negative
     return duration if duration >= 0 else 0
 
 def extract_shot_id(text):
@@ -399,12 +399,12 @@ def extract_locator_components(loc_line):
         return "", "", ""
 
 # 📤 File upload
-st.markdown('<div class="glass-container">', unsafe_allow_html=True) # Neuer Container
+st.markdown('<div class="glass-container">', unsafe_allow_html=True) # New Container
 uploaded_file = st.file_uploader("📤 **Upload your EDL file**", type=["edl", "txt"])
-st.markdown('</div>', unsafe_allow_html=True) # Ende des Upload-Containers
+st.markdown('</div>', unsafe_allow_html=True) # End of Upload Container
 
 if uploaded_file:
-    st.markdown('<div class="glass-container">', unsafe_allow_html=True) # Neuer Container für Processing
+    st.markdown('<div class="glass-container">', unsafe_allow_html=True) # New Container for Processing
     edl_text = uploaded_file.read().decode("utf-8", errors="ignore")
     edl_lines = edl_text.splitlines()
     preview_lines = edl_lines[:int(preview_limit)]
@@ -416,7 +416,7 @@ if uploaded_file:
         else:
             highlighted_lines.append(f'<div class="edl-line">{line}</div>')
     
-    st.markdown("### 📝 Preview of EDL")
+    st.markdown("### 📝 EDL Preview")
     st.markdown(f"*(First {int(preview_limit)} lines, **`*LOC`** highlighted)*")
     st.markdown("---")
     
@@ -477,14 +477,14 @@ if uploaded_file:
             if color_filter_active and locator_color.lower() != selected_color.lower():
                  continue 
             
-            # Daten für Locator Frames (Rec) erfassen
+            # Capture data for Locator Frames (Rec)
             base_data = events_map.get(current_event_number, {})
             if current_event_number and base_data.get("rec_in"):
                 locator_frames = timecode_to_frames(locator_tc, selected_fps, is_drop_frame)
             else:
                 locator_frames = None
 
-            # Dauer in Frames berechnen (unter Berücksichtigung der neuen Option)
+            # Calculate Duration in Frames (considering the new option)
             src_in = base_data.get("src_in", "")
             src_out = base_data.get("src_out", "")
             duration_frames = calculate_duration_frames(
@@ -492,7 +492,7 @@ if uploaded_file:
                 src_out, 
                 selected_fps, 
                 is_drop_frame, 
-                exclude_last_frame # NEUE VARIABLE
+                exclude_last_frame # NEW VARIABLE
             )
             
             row = {
@@ -502,11 +502,11 @@ if uploaded_file:
                 "Src_Out": src_out,
                 "Rec_In": base_data.get("rec_in", ""),
                 "Rec_Out": base_data.get("rec_out", ""),
-                "Frames (Rec)": locator_frames if locator_frames is not None else "", # Daten bleiben intern
+                "Frames (Rec)": locator_frames if locator_frames is not None else "",
                 "*LOC TC": locator_tc,
                 "*LOC Color": locator_color,
                 "*LOC Description": loc_description,
-                "Dauer (Frames)": duration_frames,
+                "Duration (Frames)": duration_frames, # TRANSLATED COLUMN NAME
             }
             
             # Conditional inclusion based on checkboxes
@@ -520,13 +520,13 @@ if uploaded_file:
         # Logic for export_only_loc = False (Export all events)
         elif not export_only_loc and current_event_number and current_event_number in events_map:
             
-            # Prüfen, ob das Event bereits einen LOC-Eintrag hat, um keine Duplikate zu erstellen
+            # Check if the event already has an LOC entry to avoid duplicates
             event_already_present = any(row.get("Event") == current_event_number and row.get("*LOC TC") != "" for row in loc_rows)
             
             if not event_already_present:
                 base_data = events_map.get(current_event_number, {})
                 
-                # Dauer in Frames berechnen (unter Berücksichtigung der neuen Option)
+                # Calculate Duration in Frames (considering the new option)
                 src_in = base_data.get("src_in", "")
                 src_out = base_data.get("src_out", "")
                 duration_frames = calculate_duration_frames(
@@ -534,7 +534,7 @@ if uploaded_file:
                     src_out, 
                     selected_fps, 
                     is_drop_frame,
-                    exclude_last_frame # NEUE VARIABLE
+                    exclude_last_frame # NEW VARIABLE
                 )
                 
                 row = {
@@ -548,7 +548,7 @@ if uploaded_file:
                     "*LOC TC": "",
                     "*LOC Color": "",
                     "*LOC Description": "No LOCATOR found",
-                    "Dauer (Frames)": duration_frames,
+                    "Duration (Frames)": duration_frames, # TRANSLATED COLUMN NAME
                 }
                 
                 # Conditional inclusion based on checkboxes
@@ -563,20 +563,20 @@ if uploaded_file:
     if loc_rows:
         df = pd.DataFrame(loc_rows)
         
-        # Final Column Order: Event, Shot ID, Tapenam, Clipname, Src IN, Src OUT, Dauer (Frames), Rec IN, Rec OUT, LOC TC, Loc Color, Loc Text
+        # Final Column Order: Event, Shot ID, Tapename, Clipname, Src IN, Src OUT, Duration (Frames), Rec IN, Rec OUT, LOC TC, Loc Color, Loc Text
         desired_columns = ["Event", "Shot ID"]
         
-        # Bedingte Spalten einfügen
+        # Conditional columns insertion
         if include_tapename:
             desired_columns.append("Tapename")
         if include_clipname:
             desired_columns.append("Clipname")
             
-        # Feste Spaltenreihenfolge
+        # Fixed column order
         desired_columns.extend([
             "Src_In", 
             "Src_Out", 
-            "Dauer (Frames)", 
+            "Duration (Frames)", # TRANSLATED
             "Rec_In", 
             "Rec_Out", 
             "*LOC TC", 
@@ -584,7 +584,7 @@ if uploaded_file:
             "*LOC Description"
         ])
         
-        # Nur die gewünschten Spalten in der richtigen Reihenfolge auswählen
+        # Select only the desired columns in the correct order
         df = df.reindex(columns=[col for col in desired_columns if col in df.columns])
 
         st.markdown("### ✨ Processed Locator Data")
