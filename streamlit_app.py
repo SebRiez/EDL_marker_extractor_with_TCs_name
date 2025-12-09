@@ -8,32 +8,272 @@ import io
 import math
 from datetime import datetime
 
-# App config
-st.set_page_config(page_title="EDL Locator Extractor", layout="wide")
+# ---------------------------------------------------------
+# FARBDEFINITIONEN (Übernommen von Code 1)
+# ---------------------------------------------------------
+# Mappe von Farbnamen zu CSS-kompatiblen Werten (Hex oder Standardname)
+COLOR_HEX_MAP = {
+    'Blue': '#0074D9', 'Cyan': '#00B8D4', 'Green': '#2ECC40', 
+    'Yellow': '#FFDC00', 'Red': '#FF4136', 'Orange': '#FF851B', 
+    'Magenta': '#FF4136', 'Purple': '#B10DC9', 'Fuchsia': '#F012BE', 
+    'Rose': '#F5B0C4', 'Sky': '#87CEEB', 'Mint': '#98FB98', 
+    'Lemon': '#FFFACD', 'Sand': '#F4A460', 'Cocoa': '#6F4E37', 
+    'White': '#FFFFFF', 'Black': '#000000', 
+    'Denim': '#1560BD'
+}
+# Aktualisierte Liste der standardisierten Markerfarben (basiert auf der Map)
+COLOR_OPTIONS = list(COLOR_HEX_MAP.keys())
+# Farbauswahl für den Filter (Alle Farben + die definierten Optionen)
+FILTER_COLOR_OPTIONS = ["All Colors"] + COLOR_OPTIONS
 
-# 💡 CSS for compact inputs
+
+# ---------------------------------------------------------
+# Page Configuration (Übernommen von Code 1)
+# ---------------------------------------------------------
+st.set_page_config(
+    page_title="EDL Locator Extractor",
+    layout="centered", 
+    initial_sidebar_state="collapsed"
+)
+
+# ---------------------------------------------------------
+# CSS – Emerald Green Palette (Übernommen von Code 1)
+# ---------------------------------------------------------
 st.markdown("""
 <style>
-.small-box .stSelectbox, .small-box .stNumberInput, .small-box .stCheckbox {
-    width: fit-content !important;
-    min-width: 160px;
-}
+    /* FARBPALETTE (Emerald Green):
+     * Deep Dark Grey (Hintergrund): #1E2025 
+     * Mid Dark Grey (Container): #2D2F34
+     * Emerald Green (Akzent, Interaktion): #42B38F
+     * Light Green (Highlight): #80ED99
+     * Off-White (Text): #F0F0F0
+     */
+
+    /* Main background */
+    .stApp { 
+        background-color: #1E2025;
+        color: #F0F0F0;
+    }
+
+    /* Begrenzung der maximalen Breite des Hauptinhalts (Breite von Code 1: 900px) */
+    .main {
+        max-width: 900px; 
+        padding: 0 3rem; 
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
+    /* Header styling (Gradient in Emerald Green) */
+    .main-header {
+        background: linear-gradient(135deg, #42B38F 0%, #80ED99 100%);
+        padding: 2.5rem;
+        border-radius: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 20px 60px rgba(66, 179, 143, 0.3);
+        text-align: center;
+    }
+    
+    .main-header h1 {
+        color: #1E2025; 
+        font-size: 3rem;
+        font-weight: 800;
+        margin: 0;
+        text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        letter-spacing: -0.5px;
+    }
+    
+    .main-header p {
+        color: rgba(30, 32, 37, 0.9);
+        font-size: 1.1rem;
+        margin: 0.5rem 0 0 0;
+        font-weight: 500;
+    }
+    
+    /* Container styling (Mid Dark Grey) */
+    .glass-container {
+        background: #2D2F34;
+        border-radius: 1.5rem;
+        border: 1px solid rgba(240, 240, 240, 0.1);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    /* Preview cards (nicht direkt verwendet, aber für Konsistenz beibehalten) */
+    .preview-card {
+        background: #2D2F34;
+        border: 1px solid rgba(66, 179, 143, 0.2);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .preview-card:empty {
+        display: none !important;
+    }
+
+    .preview-card:hover {
+        border-color: rgba(66, 179, 143, 0.5);
+        box-shadow: 0 8px 24px rgba(66, 179, 143, 0.2);
+        transform: translateY(-2px);
+    }
+    
+    /* Section headers */
+    h2, h3 {
+        color: #80ED99 !important;
+        font-weight: 700 !important;
+        margin-bottom: 1rem !important;
+    }
+    
+    /* Input fields */
+    div.stTextInput input, div.stNumberInput input, div[data-baseweb="select"] {
+        background: #1E2025 !important; 
+        border: 1px solid rgba(128, 237, 153, 0.3) !important; 
+        border-radius: 0.5rem !important;
+        color: #F0F0F0 !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    div.stTextInput input:focus, div.stNumberInput input:focus, div[data-baseweb="select"]:focus-within {
+        border-color: #42B38F !important; 
+        box-shadow: 0 0 0 3px rgba(66, 179, 143, 0.3) !important;
+    }
+    
+    /* Buttons - Primary (Emerald Green Akzent) */
+    .stButton button {
+        background: #42B38F !important;
+        color: #1E2025 !important;
+        border-radius: 0.75rem !important;
+        transition: all 0.3s ease !important;
+        border: none !important;
+        font-weight: 600 !important;
+        padding: 0.75rem 1.5rem !important;
+        box-shadow: 0 4px 12px rgba(66, 179, 143, 0.3) !important;
+    }
+    
+    .stButton button:hover {
+        transform: translateY(-2px) !important;
+        background: #80ED99 !important;
+        box-shadow: 0 8px 24px rgba(66, 179, 143, 0.5) !important;
+    }
+    
+    /* Download buttons (Sekundärer Akzent) */
+    .stDownloadButton button {
+        background: rgba(128, 237, 153, 0.15) !important; 
+        color: #80ED99 !important; 
+        border: 1px solid rgba(128, 237, 153, 0.3) !important;
+        border-radius: 0.75rem !important;
+        transition: all 0.3s ease !important;
+        font-weight: 600 !important;
+        padding: 0.75rem 1.5rem !important;
+    }
+    
+    .stDownloadButton button:hover {
+        background: rgba(128, 237, 153, 0.25) !important;
+        border-color: #42B38F !important; 
+        transform: translateY(-2px) !important;
+    }
+    
+    /* File uploader (Dunkler Hintergrund mit hellem Rand) */
+    div[data-testid="stFileUploader"] {
+        background: #2D2F34;
+        border: 2px dashed rgba(128, 237, 153, 0.5); 
+        border-radius: 1rem;
+        padding: 2rem;
+        transition: all 0.3s ease;
+    }
+    
+    div[data-testid="stFileUploader"]:hover {
+        border-color: #42B38F;
+        background: rgba(66, 179, 143, 0.1);
+    }
+    
+    /* Bilder: Skalierung und Zentrierung */
+    div[data-testid="stImage"] img {
+        border-radius: 1rem;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(240, 240, 240, 0.1);
+        max-width: 50%; 
+        height: auto;
+        display: block; 
+        margin-left: auto; 
+        margin-right: auto; 
+    }
+    
+    /* Dataframes */
+    .dataframe {
+        background: #2D2F34 !important;
+        border-radius: 0.75rem !important;
+    }
+    
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0.5rem;
+        background: #2D2F34;
+        padding: 0.5rem;
+        border-radius: 0.75rem;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        /* Aktiver Tab als heller Akzent */
+        background: linear-gradient(135deg, #42B38F 0%, #80ED99 100%);
+        color: #1E2025 !important; 
+    }
+    
+    /* Info/Success/Error */
+    .stAlert {
+        border-left: 4px solid #42B38F;
+        color: #80ED99;
+    }
+    div[data-testid="stSuccess"] {
+        border-left: 4px solid #4CAF50 !important;
+        color: #4CAF50 !important;
+    }
+    div[data-testid="stError"] {
+        border-left: 4px solid #F44336 !important;
+        color: #F44336 !important;
+    }
+    
+    /* Divider */
+    hr {
+        border-color: rgba(240, 240, 240, 0.1) !important;
+        margin: 2rem 0 !important;
+    }
+    
+    /* ZUGEFÜGT FÜR CODE 2: Angepasstes Styling für kleine Boxen/Inputs */
+    .small-box .stSelectbox, .small-box .stNumberInput, .small-box .stCheckbox {
+        width: fit-content !important;
+        min-width: 160px;
+    }
+    
+    /* Hintergrundfarbe für die *LOC Zeilen-Highlights anpassen */
+    .loc-highlight {
+        background-color: rgba(66, 179, 143, 0.3) !important; /* Emerald Green Akzent */
+        color: #F0F0F0 !important;
+        padding: 2px;
+        border-radius: 0.25rem;
+        margin-bottom: 2px;
+    }
+    .edl-line {
+        color: #F0F0F0;
+        padding: 2px;
+        margin-bottom: 2px;
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
-# 🎬 Title box
+# 🎬 Title box (ANGAPASST: Ersetzt durch main-header)
 st.markdown("""
-<div style="display: flex; justify-content: center;">
-  <div style='background-color:#e0f0ff;padding:10px 20px;border-radius:10px;
-              border:1px solid #b3d1f0; text-align:center; display:inline-block;'>
-    <h2 style='color:#003366; margin: 0;'>🎬 EDL Locator Extractor 🎬 </h2>
-  </div>
+<div class="main-header">
+    <h1>🎬 EDL Locator Extractor</h1>
+    <p>Extract locator data and timecodes from Edit Decision Lists (EDLs)</p>
 </div>
 """, unsafe_allow_html=True)
 
 st.markdown("""
-Upload an EDL file (optimized for File32 EDL) to extract all `*LOC` entries along with their timecodes and metadata.  
-If your EDL contains `Tapename` and `Clipname`, you can check below whether they should be inserted into the CSV (not active yet).
+Upload an EDL file (optimized for File32 EDL) to extract all `*LOC` entries along with their timecodes and metadata. 
+If your EDL contains `Tapename` and `Clipname`, you can check below whether they should be inserted into the CSV.
 """)
 
 # 🧮 FPS & preview inputs
@@ -47,58 +287,62 @@ fps_options = {
     "60 fps": 60
 }
 
-# 🎨 Locator Color Options (must match EDL colors)
-LOCATOR_COLORS_EN = ["All Colors", "Red", "Yellow", "Blue", "Denim", "Pink", "Orange", "White", "Black"]
+st.markdown('<div class="glass-container">', unsafe_allow_html=True) # Neuer Container
+st.markdown("### ⚙️ Settings")
 
-with st.container():
-    col1, col2, col3 = st.columns([1, 1, 1])
+col1, col2, col3 = st.columns([1, 1, 1])
 
-    with col1:
+with col1:
+    with st.container():
+        st.markdown('<div class="small-box">', unsafe_allow_html=True)
+        selected_fps_label = st.selectbox("🎞️ **FPS**", list(fps_options.keys()), index=2)
+        st.markdown("</div>", unsafe_allow_html=True)
+        selected_fps = fps_options[selected_fps_label]
+
+with col2:
+    with st.container():
+        st.markdown('<div class="small-box">', unsafe_allow_html=True)
+        preview_limit = st.number_input("🔢 **Preview Lines**", min_value=50, value=50, step=10, format="%d")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+with col3:
+    with st.container():
+        st.markdown('<div class="small-box">', unsafe_allow_html=True)
+        # NEU: Farbselektion verwendet die konsistente Liste FILTER_COLOR_OPTIONS
+        selected_color = st.selectbox(
+            "🎨 **Filter Locator Color**", 
+            FILTER_COLOR_OPTIONS, 
+            index=0, # Startet bei "All Colors"
+            help="Select a color to export only locators of that color."
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
+    
+    if selected_fps in [29.97, 59.94]:
         with st.container():
             st.markdown('<div class="small-box">', unsafe_allow_html=True)
-            selected_fps_label = st.selectbox("🎞️ **FPS**", list(fps_options.keys()), index=2)
+            is_drop_frame = st.checkbox("🧮 **Drop-Frame**", value=True)
             st.markdown("</div>", unsafe_allow_html=True)
-            selected_fps = fps_options[selected_fps_label]
-
-    with col2:
-        with st.container():
-            st.markdown('<div class="small-box">', unsafe_allow_html=True)
-            preview_limit = st.number_input("🔢 **Preview Lines**", min_value=50, value=50, step=10, format="%d")
-            st.markdown("</div>", unsafe_allow_html=True)
-
-    with col3:
-        with st.container():
-            st.markdown('<div class="small-box">', unsafe_allow_html=True)
-            # NEW: Color selection for locator export
-            selected_color = st.selectbox("🎨 **Filter Locator Color**", LOCATOR_COLORS_EN, index=0, 
-                                          help="Select a color to export only locators of that color.")
-            st.markdown("</div>", unsafe_allow_html=True)
-        
-        if selected_fps in [29.97, 59.94]:
-            with st.container():
-                st.markdown('<div class="small-box">', unsafe_allow_html=True)
-                is_drop_frame = st.checkbox("🧮 **Drop-Frame**", value=True)
-                st.markdown("</div>", unsafe_allow_html=True)
-        else:
-            is_drop_frame = False
+    else:
+        is_drop_frame = False
 
 # 🆕 Checkboxes for display options (inline)
-st.markdown("""
-<div style="display: flex; gap: 2em; align-items: center; justify-content: center;">
-    <div>
-        <label><input type="checkbox" checked disabled style="pointer-events: none; margin-right: 0.5em;">📼 Tapename</label>
-    </div>
-    <div>
-        <label><input type="checkbox" checked disabled style="pointer-events: none; margin-right: 0.5em;">🎬 Clipname</label>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+st.markdown("---")
+col_cb1, col_cb2, col_cb3 = st.columns(3)
 
-# ➕ NEW: Export mode
-export_only_loc = st.checkbox("**Export only *LOC entries**", value=True,
-                             help="Turn off to export ALL events. Events without *LOC will have empty locator fields; events with multiple LOCs will be duplicated per locator.")
+with col_cb1:
+    include_tapename = st.checkbox("📼 **Include Tapename**", value=True, help="Include Tapename column in the exported CSV.")
 
-# 🕒 Timecode tools
+with col_cb2:
+    include_clipname = st.checkbox("🎬 **Include Clipname**", value=True, help="Include Clipname column in the exported CSV.")
+
+with col_cb3:
+    # ➕ NEW: Export mode
+    export_only_loc = st.checkbox("📝 **Export only *LOC entries**", value=True,
+                                  help="Turn off to export ALL events. Events without *LOC will have empty locator fields; events with multiple LOCs will be duplicated per locator.")
+
+st.markdown('</div>', unsafe_allow_html=True) # Ende des Settings-Containers
+
+# 🕒 Timecode tools (Unverändert)
 def timecode_to_frames(tc, fps, drop_frame=False):
     h, m, s, f = map(int, tc.strip().split(":"))
     if drop_frame and fps == 29.97:
@@ -129,21 +373,31 @@ def extract_locator_components(loc_line):
         return "", "", ""
 
 # 📤 File upload
+st.markdown('<div class="glass-container">', unsafe_allow_html=True) # Neuer Container
 uploaded_file = st.file_uploader("📤 **Upload your EDL file**", type=["edl", "txt"])
+st.markdown('</div>', unsafe_allow_html=True) # Ende des Upload-Containers
 
 if uploaded_file:
+    st.markdown('<div class="glass-container">', unsafe_allow_html=True) # Neuer Container für Processing
     edl_text = uploaded_file.read().decode("utf-8", errors="ignore")
     edl_lines = edl_text.splitlines()
     preview_lines = edl_lines[:int(preview_limit)]
 
     highlighted_lines = []
     for line in preview_lines:
+        # ANGAPASST: Neue CSS-Klassen loc-highlight und edl-line verwenden
         if re.search(r"\*\s*LOC", line):
-            highlighted_lines.append(f'<div style="background-color:#228B22;color:white;padding:2px;">{line}</div>')
+            highlighted_lines.append(f'<div class="loc-highlight">{line}</div>')
         else:
-            highlighted_lines.append(f'<div>{line}</div>')
-    st.subheader(f"📝 **Preview of EDL** (first {int(preview_limit)} lines, *LOC highlighted)")
-    st.markdown("<br>".join(highlighted_lines), unsafe_allow_html=True)
+            highlighted_lines.append(f'<div class="edl-line">{line}</div>')
+    
+    st.markdown("### 📝 Preview of EDL") # ANGAPASST: Neue Überschrift
+    st.markdown(f"*(First {int(preview_limit)} lines, **`*LOC`** highlighted)*")
+    st.markdown("---")
+    
+    # HTML-Div zur Anzeige der Zeilen verwenden
+    st.markdown(f'<div style="max-height: 400px; overflow-y: scroll; background-color: #1E2025; padding: 1rem; border-radius: 0.5rem;">{"".join(highlighted_lines)}</div>', unsafe_allow_html=True)
+
 
     if len(edl_lines) > preview_limit:
         st.info(f"The EDL contains **{len(edl_lines)}** total lines. Only the first **{int(preview_limit)}** are shown above.")
@@ -195,128 +449,106 @@ if uploaded_file:
             locator_tc, locator_color, loc_description = extract_locator_components(line)
             shot_id = extract_shot_id(loc_description)
 
-            try:
-                frames_in = timecode_to_frames(current_timecodes["src_in"], selected_fps, is_drop_frame) if current_timecodes else None
-                frames_out = timecode_to_frames(current_timecodes["src_out"], selected_fps, is_drop_frame) if current_timecodes else None
-                cut_range = frames_out - frames_in if frames_in is not None and frames_out is not None else None
-            except Exception:
-                cut_range = None
-
-            loc_rows.append({
-                "event_number": current_event_number or "",
-                "shot_id": shot_id,
-                "tape_name": current_tape_name or "",
-                "clip_name": current_clipname or "",
-                "src_in": current_timecodes["src_in"] if current_timecodes else "",
-                "src_out": current_timecodes["src_out"] if current_timecodes else "",
-                "cut_range (frames)": cut_range,
-                "rec_in": current_timecodes["rec_in"] if current_timecodes else "",
-                "rec_out": current_timecodes["rec_out"] if current_timecodes else "",
-                "locator_timecode": locator_tc,
-                "locator_color": locator_color.upper(), # Store color in uppercase for filtering
-                "locator_text": loc_description
-            })
-
-    # 📦 Build output according to export mode
-    column_order = [
-        "event_number", "shot_id", "tape_name", "clip_name",
-        "src_in", "src_out", "cut_range (frames)",
-        "rec_in", "rec_out",
-        "locator_timecode", "locator_color", "locator_text"
-    ]
-    
-    # 💥 NEW: Filter locators by color
-    if selected_color != "All Colors":
-        # Filter only the loc_rows by the selected color
-        filtered_loc_rows = [
-            row for row in loc_rows 
-            if row["locator_color"] == selected_color.upper()
-        ]
-        # Update loc_rows for further processing
-        loc_rows = filtered_loc_rows
-
-    if export_only_loc:
-        # Only rows with *LOC
-        if loc_rows:
-            df_out = pd.DataFrame(loc_rows)[column_order]
-        else:
-            df_out = pd.DataFrame(columns=column_order)
-            if selected_color != "All Colors":
-                st.warning(f"No *LOC entries with color '{selected_color}' found.")
+            # Filter Color
+            color_filter_active = selected_color != "All Colors"
+            # Wichtig: Der Filter muss den EDL-Farbnamen (locator_color) mit dem ausgewählten
+            # Farbnamen (selected_color) abgleichen, da der EDL-Farbname im EDL-Inhalt steht.
+            if color_filter_active and locator_color.lower() != selected_color.lower():
+                 continue # Skip if color doesn't match filter
+            
+            # Use rec_in as the base TC for locator frames calculation
+            if current_event_number and events_map[current_event_number]["rec_in"]:
+                # --- WICHTIG: Korrekte Frame-Berechnung ---
+                locator_frames = timecode_to_frames(locator_tc, selected_fps, is_drop_frame)
             else:
-                st.warning("No *LOC entries found in the EDL.")
-    else:
-        # ALL events: merge base event rows with locators
-        merged_rows = []
-        # build a quick index of locs by event
-        loc_by_event = {}
-        for row in loc_rows:
-            loc_by_event.setdefault(row["event_number"], []).append(row)
+                locator_frames = None
 
-        for ev in events_order:
-            base = events_map.get(ev, {})
-            # compute cut_range for base row too
-            try:
-                # Store the source IN timecode
-                src_in_tc = base.get("src_in", "00:00:00:00")
+            # Base data
+            base_data = events_map.get(current_event_number, {})
+            
+            row = {
+                "Event": current_event_number or "",
+                "Rec_In": base_data.get("rec_in", ""),
+                "Rec_Out": base_data.get("rec_out", ""),
+                "Src_In": base_data.get("src_in", ""),
+                "Src_Out": base_data.get("src_out", ""),
+                "*LOC TC": locator_tc,
+                "*LOC Color": locator_color,
+                "*LOC Description": loc_description,
+                "Frames (Rec)": locator_frames if locator_frames is not None else "",
+                "Shot ID": shot_id
+            }
+            
+            # Conditional inclusion based on checkboxes
+            if include_tapename:
+                row["Tapename"] = base_data.get("tape_name", "")
+            if include_clipname:
+                row["Clipname"] = base_data.get("clip_name", "")
+
+            # Die Reihenfolge der Spalten im DataFrame muss nach der bedingten Aufnahme festgelegt werden.
+            loc_rows.append(row)
+        
+        # Logic for export_only_loc = False (Export all events)
+        elif not export_only_loc and current_event_number and current_event_number in events_map:
+            # Überprüfen, ob das Event bereits einen LOC-Eintrag hat, um reine Duplikate zu vermeiden
+            if current_event_number not in [row["Event"] for row in loc_rows]:
+                base_data = events_map.get(current_event_number, {})
+                row = {
+                    "Event": current_event_number or "",
+                    "Rec_In": base_data.get("rec_in", ""),
+                    "Rec_Out": base_data.get("rec_out", ""),
+                    "Src_In": base_data.get("src_in", ""),
+                    "Src_Out": base_data.get("src_out", ""),
+                    "*LOC TC": "",
+                    "*LOC Color": "",
+                    "*LOC Description": "No LOCATOR found",
+                    "Frames (Rec)": "",
+                    "Shot ID": ""
+                }
                 
-                # Compute frames_in safely on a separate line
-                frames_in = timecode_to_frames(src_in_tc, selected_fps, is_drop_frame) \
-                            if base.get("src_in") else None
-
-                # Store the source OUT timecode
-                src_out_tc = base.get("src_out", "00:00:00:00")
+                # Conditional inclusion based on checkboxes
+                if include_tapename:
+                    row["Tapename"] = base_data.get("tape_name", "")
+                if include_clipname:
+                    row["Clipname"] = base_data.get("clip_name", "")
+                    
+                loc_rows.append(row)
                 
-                # Compute frames_out safely on a separate line
-                frames_out = timecode_to_frames(src_out_tc, selected_fps, is_drop_frame) \
-                             if base.get("src_out") else None
-                
-                # Compute cut range
-                cut_range = frames_out - frames_in if frames_in is not None and frames_out is not None else None
-            except Exception:
-                cut_range = None
+    # 📊 Display Results
+    if loc_rows:
+        df = pd.DataFrame(loc_rows)
+        
+        # Final Column Order basierend auf Checkbox-Status festlegen
+        desired_columns = ["Event"]
+        if include_tapename:
+            desired_columns.append("Tapename")
+        if include_clipname:
+            desired_columns.append("Clipname")
+        desired_columns.extend(["Rec_In", "Rec_Out", "Src_In", "Src_Out", "*LOC TC", "*LOC Color", "*LOC Description", "Frames (Rec)", "Shot ID"])
+        
+        # Nur die gewünschten Spalten in der richtigen Reihenfolge auswählen
+        df = df.reindex(columns=[col for col in desired_columns if col in df.columns])
 
-            if ev in loc_by_event:
-                # add one row per locator (preserve full locator info)
-                merged_rows.extend(loc_by_event[ev])
-            else:
-                # add a base row with empty locator fields
-                merged_rows.append({
-                    "event_number": ev,
-                    "shot_id": "",
-                    "tape_name": base.get("tape_name",""),
-                    "clip_name": base.get("clip_name",""),
-                    "src_in": base.get("src_in",""),
-                    "src_out": base.get("src_out",""),
-                    "cut_range (frames)": cut_range,
-                    "rec_in": base.get("rec_in",""),
-                    "rec_out": base.get("rec_out",""),
-                    "locator_timecode": "",
-                    "locator_color": "",
-                    "locator_text": ""
-                })
+        st.markdown("### ✨ Processed Locator Data")
+        st.dataframe(df, use_container_width=True)
+        
+        st.markdown("---")
+        st.markdown("### ⬇️ Download Data")
 
-        df_out = pd.DataFrame(merged_rows)[column_order] if merged_rows else pd.DataFrame(columns=column_order)
-
-    # 📥 Output
-    if not df_out.empty:
-        view_title = "🔍 **Extracted *LOC Entries with Metadata**" if export_only_loc else "🧾 **All Events (incl. locator rows)**"
-        st.subheader(view_title)
-        st.dataframe(df_out, use_container_width=True)
-
-        original_name = uploaded_file.name.rsplit(".", 1)[0]
-        date_suffix = datetime.now().strftime("%y%m%d")
-        filename_color = selected_color.lower().replace(" ", "_")
-        filename = f"{original_name}_processed_{date_suffix}_{filename_color}.csv"
-
-        csv_buffer = io.StringIO()
-        df_out.to_csv(csv_buffer, index=False)
-
+        # Prepare for download
+        csv = df.to_csv(index=False)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        file_name = f"EDL_Locators_{timestamp}.csv"
+        
         st.download_button(
-            label=f"📥 Download CSV: {filename}",
-            data=csv_buffer.getvalue(),
-            file_name=filename,
-            mime="text/csv"
+            label="📥 Download CSV",
+            data=csv,
+            file_name=file_name,
+            mime="text/csv",
+            use_container_width=True
         )
+        st.success("✅ Processing complete! Download your CSV above.")
     else:
-        st.warning("No events or locators found that match your criteria.")
+        st.warning("⚠️ No `*LOC` entries found in the EDL or they were filtered out by the color selection.")
+
+    st.markdown('</div>', unsafe_allow_html=True)
