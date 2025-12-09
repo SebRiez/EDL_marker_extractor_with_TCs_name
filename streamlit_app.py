@@ -9,7 +9,7 @@ import math
 from datetime import datetime
 
 # ---------------------------------------------------------
-# FARBDEFINITIONEN (Übernommen von Code 1)
+# FARBDEFINITIONEN (Unverändert)
 # ---------------------------------------------------------
 # Mappe von Farbnamen zu CSS-kompatiblen Werten (Hex oder Standardname)
 COLOR_HEX_MAP = {
@@ -28,7 +28,7 @@ FILTER_COLOR_OPTIONS = ["All Colors"] + COLOR_OPTIONS
 
 
 # ---------------------------------------------------------
-# Page Configuration (Übernommen von Code 1)
+# Page Configuration (Unverändert)
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="EDL Locator Extractor",
@@ -37,7 +37,7 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# CSS – Emerald Green Palette (Übernommen von Code 1)
+# CSS – Emerald Green Palette (Unverändert)
 # ---------------------------------------------------------
 st.markdown("""
 <style>
@@ -55,7 +55,7 @@ st.markdown("""
         color: #F0F0F0;
     }
 
-    /* Begrenzung der maximalen Breite des Hauptinhalts (Breite von Code 1: 900px) */
+    /* Begrenzung der maximalen Breite des Hauptinhalt - 900px */
     .main {
         max-width: 900px; 
         padding: 0 3rem; 
@@ -263,7 +263,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 🎬 Title box (ANGAPASST: Ersetzt durch main-header)
+# 🎬 Title box 
 st.markdown("""
 <div class="main-header">
     <h1>🎬 EDL Locator Extractor</h1>
@@ -308,26 +308,26 @@ with col2:
 with col3:
     with st.container():
         st.markdown('<div class="small-box">', unsafe_allow_html=True)
-        # NEU: Farbselektion verwendet die konsistente Liste FILTER_COLOR_OPTIONS
         selected_color = st.selectbox(
             "🎨 **Filter Locator Color**", 
             FILTER_COLOR_OPTIONS, 
-            index=0, # Startet bei "All Colors"
+            index=0, 
             help="Select a color to export only locators of that color."
         )
         st.markdown("</div>", unsafe_allow_html=True)
     
+    # Drop-Frame Option
+    is_drop_frame = False
     if selected_fps in [29.97, 59.94]:
         with st.container():
             st.markdown('<div class="small-box">', unsafe_allow_html=True)
             is_drop_frame = st.checkbox("🧮 **Drop-Frame**", value=True)
             st.markdown("</div>", unsafe_allow_html=True)
-    else:
-        is_drop_frame = False
+
 
 # 🆕 Checkboxes for display options (inline)
 st.markdown("---")
-col_cb1, col_cb2, col_cb3 = st.columns(3)
+col_cb1, col_cb2, col_cb3, col_cb4 = st.columns(4)
 
 with col_cb1:
     include_tapename = st.checkbox("📼 **Include Tapename**", value=True, help="Include Tapename column in the exported CSV.")
@@ -336,28 +336,54 @@ with col_cb2:
     include_clipname = st.checkbox("🎬 **Include Clipname**", value=True, help="Include Clipname column in the exported CSV.")
 
 with col_cb3:
-    # ➕ NEW: Export mode
     export_only_loc = st.checkbox("📝 **Export only *LOC entries**", value=True,
                                   help="Turn off to export ALL events. Events without *LOC will have empty locator fields; events with multiple LOCs will be duplicated per locator.")
 
+with col_cb4:
+    # NEUE OPTION FÜR DIE DAUERBERECHNUNG
+    exclude_last_frame = st.checkbox(
+        "➖ **Dauer: Letztes Frame abziehen**", 
+        value=True, 
+        help="Aktiviert: Dauer = (SRC OUT - SRC IN) - 1 Frame (z.B. 00:01:00 - 00:00:01 = 24 Frames; mit Abzug: 23 Frames). Deaktiviert: Standard EDL Dauer (Out ist exklusiv)."
+    )
+    
 st.markdown('</div>', unsafe_allow_html=True) # Ende des Settings-Containers
 
-# 🕒 Timecode tools (Unverändert)
+# 🕒 Timecode tools 
 def timecode_to_frames(tc, fps, drop_frame=False):
-    h, m, s, f = map(int, tc.strip().split(":"))
-    if drop_frame and fps == 29.97:
-        drop_frames = math.floor(fps * 0.066666)
-        total_minutes = h * 60 + m
-        frames = (
-            (fps * 3600 * h) +
-            (fps * 60 * m) +
-            (fps * s) +
-            f -
-            (drop_frames * (total_minutes - total_minutes // 10))
-        )
-        return round(frames)
-    else:
-        return round(h * 3600 * fps + m * 60 * fps + s * fps + f)
+    # Hilfsfunktion, um Timecode in Frames umzuwandeln
+    try:
+        h, m, s, f = map(int, tc.strip().split(":"))
+        if drop_frame and fps == 29.97:
+            drop_frames = math.floor(fps * 0.066666)
+            total_minutes = h * 60 + m
+            frames = (
+                (fps * 3600 * h) +
+                (fps * 60 * m) +
+                (fps * s) +
+                f -
+                (drop_frames * (total_minutes - total_minutes // 10))
+            )
+            return round(frames)
+        else:
+            return round(h * 3600 * fps + m * 60 * fps + s * fps + f)
+    except Exception:
+        return 0 
+
+def calculate_duration_frames(tc_in, tc_out, fps, drop_frame=False, exclude_last=False):
+    # Berechnet die Dauer in Frames (Out - In)
+    frames_out = timecode_to_frames(tc_out, fps, drop_frame)
+    frames_in = timecode_to_frames(tc_in, fps, drop_frame)
+    
+    # Standard-EDL-Dauer (Out ist exklusiv: Frames(OUT) - Frames(IN))
+    duration = frames_out - frames_in
+    
+    # Logik für den optionalen Abzug des letzten Frames
+    if exclude_last:
+        duration = duration - 1
+    
+    # Sicherstellen, dass die Dauer nicht negativ ist
+    return duration if duration >= 0 else 0
 
 def extract_shot_id(text):
     # Searches for 3 uppercase letters followed by underscore and digits (e.g., ABC_123_4567, XYZ_9999) or CSxxxx
@@ -385,17 +411,15 @@ if uploaded_file:
 
     highlighted_lines = []
     for line in preview_lines:
-        # ANGAPASST: Neue CSS-Klassen loc-highlight und edl-line verwenden
         if re.search(r"\*\s*LOC", line):
             highlighted_lines.append(f'<div class="loc-highlight">{line}</div>')
         else:
             highlighted_lines.append(f'<div class="edl-line">{line}</div>')
     
-    st.markdown("### 📝 Preview of EDL") # ANGAPASST: Neue Überschrift
+    st.markdown("### 📝 Preview of EDL")
     st.markdown(f"*(First {int(preview_limit)} lines, **`*LOC`** highlighted)*")
     st.markdown("---")
     
-    # HTML-Div zur Anzeige der Zeilen verwenden
     st.markdown(f'<div style="max-height: 400px; overflow-y: scroll; background-color: #1E2025; padding: 1rem; border-radius: 0.5rem;">{"".join(highlighted_lines)}</div>', unsafe_allow_html=True)
 
 
@@ -403,9 +427,9 @@ if uploaded_file:
         st.info(f"The EDL contains **{len(edl_lines)}** total lines. Only the first **{int(preview_limit)}** are shown above.")
 
     # 🔍 Main parsing
-    loc_rows = []                       # rows that correspond to actual *LOC lines
-    events_order = []                   # keep appearance order of events
-    events_map = {}                     # event_number -> dict of base metadata (no locator)
+    loc_rows = []                       
+    events_order = []                   
+    events_map = {}                     
     current_event_number = None
     current_timecodes = None
     current_clipname = ""
@@ -441,7 +465,6 @@ if uploaded_file:
             clip_name_match = re.match(r"\*FROM CLIP NAME:\s+(.*)", line.strip())
             if clip_name_match:
                 current_clipname = clip_name_match.group(1).strip()
-                # propagate clip name to last seen event if present
                 if current_event_number and current_event_number in events_map:
                     events_map[current_event_number]["clip_name"] = current_clipname
 
@@ -451,32 +474,39 @@ if uploaded_file:
 
             # Filter Color
             color_filter_active = selected_color != "All Colors"
-            # Wichtig: Der Filter muss den EDL-Farbnamen (locator_color) mit dem ausgewählten
-            # Farbnamen (selected_color) abgleichen, da der EDL-Farbname im EDL-Inhalt steht.
             if color_filter_active and locator_color.lower() != selected_color.lower():
-                 continue # Skip if color doesn't match filter
+                 continue 
             
-            # Use rec_in as the base TC for locator frames calculation
-            if current_event_number and events_map[current_event_number]["rec_in"]:
-                # --- WICHTIG: Korrekte Frame-Berechnung ---
+            # Daten für Locator Frames (Rec) erfassen
+            base_data = events_map.get(current_event_number, {})
+            if current_event_number and base_data.get("rec_in"):
                 locator_frames = timecode_to_frames(locator_tc, selected_fps, is_drop_frame)
             else:
                 locator_frames = None
 
-            # Base data
-            base_data = events_map.get(current_event_number, {})
+            # Dauer in Frames berechnen (unter Berücksichtigung der neuen Option)
+            src_in = base_data.get("src_in", "")
+            src_out = base_data.get("src_out", "")
+            duration_frames = calculate_duration_frames(
+                src_in, 
+                src_out, 
+                selected_fps, 
+                is_drop_frame, 
+                exclude_last_frame # NEUE VARIABLE
+            )
             
             row = {
                 "Event": current_event_number or "",
+                "Shot ID": shot_id,
+                "Src_In": src_in,
+                "Src_Out": src_out,
                 "Rec_In": base_data.get("rec_in", ""),
                 "Rec_Out": base_data.get("rec_out", ""),
-                "Src_In": base_data.get("src_in", ""),
-                "Src_Out": base_data.get("src_out", ""),
+                "Frames (Rec)": locator_frames if locator_frames is not None else "", # Daten bleiben intern
                 "*LOC TC": locator_tc,
                 "*LOC Color": locator_color,
                 "*LOC Description": loc_description,
-                "Frames (Rec)": locator_frames if locator_frames is not None else "",
-                "Shot ID": shot_id
+                "Dauer (Frames)": duration_frames,
             }
             
             # Conditional inclusion based on checkboxes
@@ -485,25 +515,40 @@ if uploaded_file:
             if include_clipname:
                 row["Clipname"] = base_data.get("clip_name", "")
 
-            # Die Reihenfolge der Spalten im DataFrame muss nach der bedingten Aufnahme festgelegt werden.
             loc_rows.append(row)
         
         # Logic for export_only_loc = False (Export all events)
         elif not export_only_loc and current_event_number and current_event_number in events_map:
-            # Überprüfen, ob das Event bereits einen LOC-Eintrag hat, um reine Duplikate zu vermeiden
-            if current_event_number not in [row["Event"] for row in loc_rows]:
+            
+            # Prüfen, ob das Event bereits einen LOC-Eintrag hat, um keine Duplikate zu erstellen
+            event_already_present = any(row.get("Event") == current_event_number and row.get("*LOC TC") != "" for row in loc_rows)
+            
+            if not event_already_present:
                 base_data = events_map.get(current_event_number, {})
+                
+                # Dauer in Frames berechnen (unter Berücksichtigung der neuen Option)
+                src_in = base_data.get("src_in", "")
+                src_out = base_data.get("src_out", "")
+                duration_frames = calculate_duration_frames(
+                    src_in, 
+                    src_out, 
+                    selected_fps, 
+                    is_drop_frame,
+                    exclude_last_frame # NEUE VARIABLE
+                )
+                
                 row = {
                     "Event": current_event_number or "",
+                    "Shot ID": extract_shot_id(base_data.get("clip_name", "")),
+                    "Src_In": src_in,
+                    "Src_Out": src_out,
                     "Rec_In": base_data.get("rec_in", ""),
                     "Rec_Out": base_data.get("rec_out", ""),
-                    "Src_In": base_data.get("src_in", ""),
-                    "Src_Out": base_data.get("src_out", ""),
+                    "Frames (Rec)": "",
                     "*LOC TC": "",
                     "*LOC Color": "",
                     "*LOC Description": "No LOCATOR found",
-                    "Frames (Rec)": "",
-                    "Shot ID": ""
+                    "Dauer (Frames)": duration_frames,
                 }
                 
                 # Conditional inclusion based on checkboxes
@@ -511,20 +556,33 @@ if uploaded_file:
                     row["Tapename"] = base_data.get("tape_name", "")
                 if include_clipname:
                     row["Clipname"] = base_data.get("clip_name", "")
-                    
+                        
                 loc_rows.append(row)
                 
     # 📊 Display Results
     if loc_rows:
         df = pd.DataFrame(loc_rows)
         
-        # Final Column Order basierend auf Checkbox-Status festlegen
-        desired_columns = ["Event"]
+        # Final Column Order: Event, Shot ID, Tapenam, Clipname, Src IN, Src OUT, Dauer (Frames), Rec IN, Rec OUT, LOC TC, Loc Color, Loc Text
+        desired_columns = ["Event", "Shot ID"]
+        
+        # Bedingte Spalten einfügen
         if include_tapename:
             desired_columns.append("Tapename")
         if include_clipname:
             desired_columns.append("Clipname")
-        desired_columns.extend(["Rec_In", "Rec_Out", "Src_In", "Src_Out", "*LOC TC", "*LOC Color", "*LOC Description", "Frames (Rec)", "Shot ID"])
+            
+        # Feste Spaltenreihenfolge
+        desired_columns.extend([
+            "Src_In", 
+            "Src_Out", 
+            "Dauer (Frames)", 
+            "Rec_In", 
+            "Rec_Out", 
+            "*LOC TC", 
+            "*LOC Color", 
+            "*LOC Description"
+        ])
         
         # Nur die gewünschten Spalten in der richtigen Reihenfolge auswählen
         df = df.reindex(columns=[col for col in desired_columns if col in df.columns])
