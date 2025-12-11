@@ -504,7 +504,7 @@ def main():
     with col_cb4:
         exclude_last_frame = st.checkbox(
             "➖ **Duration: Exclude last frame**",
-            value=True,
+            value=False,
             help="Depending on the use case, users may define the required duration differently. The feature 'Duration: Exclude last frame' allows you to choose whether the duration should include the End Frame (Out) or not. By default, this option is enabled to subtract the End Frame (Length = Out - In - 1), as this is the most common method for calculating clip length in many systems."
         )
     st.markdown('</div>', unsafe_allow_html=True)
