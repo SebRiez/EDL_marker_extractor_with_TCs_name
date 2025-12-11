@@ -1,9 +1,9 @@
 # Script created by Sebastian Riezler, refactored for clarity and maintainability
 # c 2025/06, updated 2025/12
-
 import re
 import io
 import math
+import os
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -12,7 +12,6 @@ from typing import Dict, List, Optional, Tuple, Pattern
 # =============================================
 # CONSTANTS & CONFIGURATION
 # =============================================
-
 # Map of color names to CSS-compatible values (Hex or standard name)
 COLOR_HEX_MAP = {
     'Blue': '#0074D9', 'Cyan': '#00B8D4', 'Green': '#2ECC40',
@@ -45,7 +44,6 @@ SHOT_ID_PATTERN: Pattern = re.compile(r"([A-Z]{3}_\d{3}_\d{4}|[A-Z]{3}_\d{4}|CS\
 # =============================================
 # UTILITY FUNCTIONS
 # =============================================
-
 def timecode_to_frames(tc: str, fps: float, drop_frame: bool = False) -> int:
     """
     Convert timecode string to frame count.
@@ -111,7 +109,6 @@ def extract_locator_components(loc_line: str) -> Tuple[str, str, str]:
 # =============================================
 # MAIN PARSING LOGIC
 # =============================================
-
 def parse_edl(
     edl_lines: List[str],
     selected_fps: float,
@@ -143,9 +140,7 @@ def parse_edl(
     current_timecodes = None
     current_clipname = ""
     current_tape_name = ""
-
     color_filter_active = selected_color != "All Colors"
-
     for line in edl_lines:
         event_match = EVENT_PATTERN.match(line)
         if event_match:
@@ -168,19 +163,16 @@ def parse_edl(
                 "rec_out": current_timecodes["rec_out"] if current_timecodes else "",
             }
             continue
-
         if line.strip().startswith("*FROM CLIP NAME:"):
             clip_name_match = CLIP_NAME_PATTERN.match(line.strip())
             if clip_name_match:
                 current_clipname = clip_name_match.group(1).strip()
                 if current_event_number and current_event_number in events_map:
                     events_map[current_event_number]["clip_name"] = current_clipname
-
         if "*LOC" in line:
             locator_tc, locator_color, loc_description = extract_locator_components(line)
             if color_filter_active and locator_color.lower() != selected_color.lower():
                 continue
-
             shot_id = extract_shot_id(loc_description)
             base_data = events_map.get(current_event_number, {})
             locator_frames = (
@@ -195,7 +187,6 @@ def parse_edl(
                 is_drop_frame,
                 exclude_last_frame,
             )
-
             row = {
                 "Event": current_event_number or "",
                 "Shot ID": shot_id,
@@ -214,7 +205,6 @@ def parse_edl(
             if include_clipname:
                 row["Clipname"] = base_data.get("clip_name", "")
             loc_rows.append(row)
-
         elif not export_only_loc and current_event_number and current_event_number in events_map:
             event_already_present = any(
                 row.get("Event") == current_event_number and row.get("*LOC TC") != ""
@@ -247,11 +237,9 @@ def parse_edl(
                 if include_clipname:
                     row["Clipname"] = base_data.get("clip_name", "")
                 loc_rows.append(row)
-
     if not loc_rows:
         st.warning("⚠️ No `*LOC` entries found in the EDL or they were filtered out by the color selection.")
         return pd.DataFrame()
-
     df = pd.DataFrame(loc_rows)
     desired_columns = ["Event", "Shot ID"]
     if include_tapename:
@@ -267,7 +255,6 @@ def parse_edl(
 # =============================================
 # STREAMLIT UI
 # =============================================
-
 def main():
     st.set_page_config(
         page_title="EDL Locator Extractor",
@@ -297,7 +284,6 @@ def main():
             margin-left: auto;
             margin-right: auto;
         }
-
         /* Header styling (Gradient in Emerald Green) */
         .main-header {
             background: linear-gradient(135deg, #42B38F 0%, #80ED99 100%);
@@ -307,7 +293,6 @@ def main():
             box-shadow: 0 20px 60px rgba(66, 179, 143, 0.3);
             text-align: center;
         }
-
         .main-header h1 {
             color: #1E2025;
             font-size: 3rem;
@@ -316,14 +301,12 @@ def main():
             text-shadow: 0 4px 20px rgba(0,0,0,0.3);
             letter-spacing: -0.5px;
         }
-
         .main-header p {
             color: rgba(30, 32, 37, 0.9);
             font-size: 1.1rem;
             margin: 0.5rem 0 0 0;
             font-weight: 500;
         }
-
         /* Container styling (Mid Dark Grey) */
         .glass-container {
             background: #2D2F34;
@@ -333,7 +316,6 @@ def main():
             padding: 2rem;
             margin-bottom: 1.5rem;
         }
-
         /* Preview cards (not directly used, but maintained for consistency) */
         .preview-card {
             background: #2D2F34;
@@ -342,7 +324,6 @@ def main():
             padding: 1.5rem;
             transition: all 0.3s ease;
         }
-
         .preview-card:empty {
             display: none !important;
         }
@@ -351,14 +332,12 @@ def main():
             box-shadow: 0 8px 24px rgba(66, 179, 143, 0.2);
             transform: translateY(-2px);
         }
-
         /* Section headers */
         h2, h3 {
             color: #80ED99 !important;
             font-weight: 700 !important;
             margin-bottom: 1rem !important;
         }
-
         /* Input fields */
         div.stTextInput input, div.stNumberInput input, div[data-baseweb="select"] {
             background: #1E2025 !important;
@@ -367,12 +346,10 @@ def main():
             color: #F0F0F0 !important;
             transition: all 0.3s ease !important;
         }
-
         div.stTextInput input:focus, div.stNumberInput input:focus, div[data-baseweb="select"]:focus-within {
             border-color: #42B38F !important;
             box-shadow: 0 0 0 3px rgba(66, 179, 143, 0.3) !important;
         }
-
         /* Buttons - Primary (Emerald Green Accent) */
         .stButton button {
             background: #42B38F !important;
@@ -384,13 +361,11 @@ def main():
             padding: 0.75rem 1.5rem !important;
             box-shadow: 0 4px 12px rgba(66, 179, 143, 0.3) !important;
         }
-
         .stButton button:hover {
             transform: translateY(-2px) !important;
             background: #80ED99 !important;
             box-shadow: 0 8px 24px rgba(66, 179, 143, 0.5) !important;
         }
-
         /* Download buttons (Secondary Accent) */
         .stDownloadButton button {
             background: rgba(128, 237, 153, 0.15) !important;
@@ -401,13 +376,11 @@ def main():
             font-weight: 600 !important;
             padding: 0.75rem 1.5rem !important;
         }
-
         .stDownloadButton button:hover {
             background: rgba(128, 237, 153, 0.25) !important;
             border-color: #42B38F !important;
             transform: translateY(-2px) !important;
         }
-
         /* File uploader (Dark background with light border) */
         div[data-testid="stFileUploader"] {
             background: #2D2F34;
@@ -416,12 +389,10 @@ def main():
             padding: 2rem;
             transition: all 0.3s ease;
         }
-
         div[data-testid="stFileUploader"]:hover {
             border-color: #42B38F;
             background: rgba(66, 179, 143, 0.1);
         }
-
         /* Images: Scaling and centering */
         div[data-testid="stImage"] img {
             border-radius: 1rem;
@@ -433,13 +404,11 @@ def main():
             margin-left: auto;
             margin-right: auto;
         }
-
         /* Dataframes */
         .dataframe {
             background: #2D2F34 !important;
             border-radius: 0.75rem !important;
         }
-
         /* Tabs */
         .stTabs [data-baseweb="tab-list"] {
             gap: 0.5rem;
@@ -447,13 +416,11 @@ def main():
             padding: 0.5rem;
             border-radius: 0.75rem;
         }
-
         .stTabs [aria-selected="true"] {
             /* Active tab as light accent */
             background: linear-gradient(135deg, #42B38F 0%, #80ED99 100%);
             color: #1E2025 !important;
         }
-
         /* Info/Success/Error */
         .stAlert {
             border-left: 4px solid #42B38F;
@@ -467,19 +434,16 @@ def main():
             border-left: 4px solid #F44336 !important;
             color: #F44336 !important;
         }
-
         /* Divider */
         hr {
             border-color: rgba(240, 240, 240, 0.1) !important;
             margin: 2rem 0 !important;
         }
-
         /* ADDED FOR CODE 2: Customized styling for small boxes/inputs */
         .small-box .stSelectbox, .small-box .stNumberInput, .small-box .stCheckbox {
             width: fit-content !important;
             min-width: 160px;
         }
-
         /* Background color for *LOC line highlights adjusted */
         .loc-highlight {
             background-color: rgba(66, 179, 143, 0.3) !important; /* Emerald Green Accent */
@@ -525,11 +489,9 @@ def main():
             index=0,
             help="Select a color to export only locators of that color."
         )
-
     is_drop_frame = False
     if selected_fps in [29.97, 59.94]:
         is_drop_frame = st.checkbox("🧮 **Drop-Frame**", value=True)
-
     st.markdown("---")
     col_cb1, col_cb2, col_cb3, col_cb4 = st.columns(4)
     with col_cb1:
@@ -563,7 +525,6 @@ def main():
                 highlighted_lines.append(f'<div class="loc-highlight">{line}</div>')
             else:
                 highlighted_lines.append(f'<div class="edl-line">{line}</div>')
-
         st.markdown("### 📝 EDL Preview")
         st.markdown(f"*(First {int(preview_limit)} lines, **`*LOC`** highlighted)*")
         st.markdown("---")
@@ -581,13 +542,19 @@ def main():
         if not df.empty:
             st.markdown("### ✨ Processed Locator Data")
             st.dataframe(df, use_container_width=True)
-
             st.markdown("---")
             st.markdown("### ⬇️ Download Data")
-            csv = df.to_csv(index=False)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            file_name = f"EDL_Locators_{timestamp}.csv"
 
+            # Dateinamen-Logik
+            original_filename = uploaded_file.name
+            base_name, ext = original_filename.rsplit('.', 1) if '.' in original_filename else (original_filename, '')
+            today = datetime.now().strftime("%Y%m%d")
+            file_pattern = f"{base_name}_processed_{today}_*"
+            existing_files = [f for f in os.listdir() if f.startswith(f"{base_name}_processed_{today}_") and f.endswith('.csv')]
+            counter = len(existing_files) + 1
+            file_name = f"{base_name}_processed_{today}_{counter:02d}.csv" if counter > 1 else f"{base_name}_processed_{today}.csv"
+
+            csv = df.to_csv(index=False)
             st.download_button(
                 label="📥 Download CSV",
                 data=csv,
@@ -596,6 +563,7 @@ def main():
                 use_container_width=True
             )
             st.success("✅ Processing complete! Download your CSV above.")
+
         st.markdown('</div>', unsafe_allow_html=True)
 
 if __name__ == "__main__":
